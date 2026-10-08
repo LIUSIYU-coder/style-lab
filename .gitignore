@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# generated/third-party data kept out of git until licensing is confirmed
+data/private/
+*.cedict*
