@@ -21,12 +21,13 @@
 
 ## 代码结构
 
-- `src/core/`：间隔复习（SM-2 变体）、学习队列、词表结构与校验
+- `src/core/`：间隔复习（SM-2 变体）、学习队列、词表结构与校验、进度存取格式（`storage.ts`）、选择题测验（`quiz.ts`）
 - `src/data/`：CC-CEDICT 解析、拼音声调转换、词表构建（纯函数，有测试）
 - `scripts/build-wordlist.mts`：命令行入口（读文件、写 `data/private/`）
 - `data/fixtures/sample-words.json`：**仅供开发的示例词，不是官方词表**
 - `data/private/`：**被 git 忽略**，放生成的词表和第三方数据（授权未确认前不得提交）
-- `App.tsx`：原型界面（进度只存在内存里）
+- `App.tsx`：原型界面（进度只存在内存里；存取格式已写好并有测试，还没有接上设备端存储）
+- `docs/authorization-request.md`：向汉考国际申请授权的材料清单和邮件草稿
 
 ## 词表数据管线
 
@@ -77,7 +78,8 @@ review 文件里有四类条目：`several readings`（多读音）、`sense mar
 
 ## 下一步
 
+- **向汉考国际申请授权**（见 `docs/authorization-request.md`），回复前不买开发者账号
 - 人工复核 review 文件（约 135 条），生成最终词表
-- 本地持久化（学习进度、每日新词数）
-- 模拟测验、听力、价格方案（倾向 3 个月/12 个月通行证，而不是长期订阅）
+- 把进度存取接到设备存储（按 AGENTS.md，需先读 SDK 57 对应的 Expo 文档再选模块）并在界面里接上测验
+- 听力、价格方案（倾向 3 个月/12 个月通行证，而不是长期订阅）
 - 订阅/内购、隐私政策、App Store 素材
