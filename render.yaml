@@ -1,0 +1,28 @@
+# Render 一键部署(Blueprint)。只部署 life-game 这个网站,不影响仓库里的其他项目。
+# 免费实例 15 分钟没人访问会休眠,磁盘会被清空,所以兑换码存在 Upstash Redis 里。
+services:
+  - type: web
+    name: life-book
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: life-game
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node server/main.ts
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: first
+      - key: NODE_NO_WARNINGS
+        value: "1"
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false

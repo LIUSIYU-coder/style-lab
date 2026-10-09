@@ -693,21 +693,42 @@ function office(spec: SceneSpec, _s: SceneState): Draw {
 
 const PLACES: Record<PlaceId, (spec: SceneSpec, s: SceneState) => Draw> = { home, kitchen, market, school, park, street, city, station, office };
 
-/** 只有插画时的动态层:雨、热气、风铃光影 */
-function overlayOnly(spec: SceneSpec, s: SceneState, img: HTMLImageElement): Draw {
+/** 手势会改变画面的几幕,插画可以多给一张"之后"的图,按手势进度淡入 */
+export const AFTER_IMAGE: Record<string, (s: SceneState) => number> = {
+  rain: s => s.open,
+  college: s => s.tear,
+  firsthome: s => Math.max(s.turn, s.lit),
+  newyear: s => s.lit,
+};
+
+/** 用插画时:插画铺底,上面叠雨、热气、烟花这些动态层 */
+function overlayOnly(spec: SceneSpec, s: SceneState, img: HTMLImageElement, after: HTMLImageElement | null): Draw {
   const rain = makeRain(120);
   const steam = makeSteam();
-  return (ctx, w, h, t) => {
-    const ir = img.naturalWidth / img.naturalHeight, cr = w / h;
+  const fw = makeFireworks();
+  const cover = (ctx: Ctx, im: HTMLImageElement, w: number, h: number) => {
+    const ir = im.naturalWidth / im.naturalHeight, cr = w / h;
     const dw = ir > cr ? h * ir : w, dh = ir > cr ? h : w / ir;
-    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
-    if (spec.place === 'market' || spec.place === 'kitchen') { s.wind *= 0.95; steam(ctx, t, [[w * 0.5, h * 0.8, w * 0.2, (1 - s.cool) * 0.4]], s.wind); }
+    ctx.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  };
+  return (ctx, w, h, t) => {
+    cover(ctx, img, w, h);
+    const p = after && AFTER_IMAGE[spec.id] ? AFTER_IMAGE[spec.id](s) : 0;
+    if (after && p > 0) {
+      ctx.globalAlpha = Math.min(1, p);
+      cover(ctx, after, w, h);
+      ctx.globalAlpha = 1;
+    }
+    if (spec.id === 'newyear') fw(ctx, w, h * 0.6, t, s.lit > 0.5);
+    s.wind *= 0.95;
+    if (spec.place === 'market' && spec.hour < 20 && spec.hour > 4) steam(ctx, t, [[w * 0.5, h * 0.8, w * 0.2, (1 - s.cool) * 0.45]], s.wind);
+    if (spec.place === 'kitchen' || spec.id === 'exam') steam(ctx, t, [[w * 0.35, h * 0.62, w * 0.18, 0.4]], 0);
     if (spec.rain) rain(ctx, w, h);
   };
 }
 
-export function sceneDraw(spec: SceneSpec, s: SceneState, img?: HTMLImageElement | null): Draw {
-  return img ? overlayOnly(spec, s, img) : PLACES[spec.place](spec, s);
+export function sceneDraw(spec: SceneSpec, s: SceneState, img?: HTMLImageElement | null, after?: HTMLImageElement | null): Draw {
+  return img ? overlayOnly(spec, s, img, after ?? null) : PLACES[spec.place](spec, s);
 }
 
 /** 把画面挂到一个容器上,返回停止函数 */

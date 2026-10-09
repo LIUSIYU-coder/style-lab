@@ -1,6 +1,7 @@
 // 网页服务器:托管打包好的网页(dist/),并提供兑换深度解析的接口。
 // 不依赖任何第三方包,Node 22.18 以上可以直接运行 TypeScript。
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { computeChart } from '../src/engine/chart.ts';
@@ -11,15 +12,23 @@ import { buildDeepReport } from '../src/engine/deep.ts';
 import { parseBirthInput, parsePicks, parsePlace } from '../src/engine/validate.ts';
 import { ageOn, parseReader } from '../src/engine/reader.ts';
 import { CodeStore, isDeviceId, MAX_DEVICES } from './codes.ts';
+import { ADMIN_PAGE } from './admin-page.ts';
 
 export interface AppOptions {
   store: CodeStore;
   distDir: string;
-  /** 部署在 Caddy/Nginx 后面时为 true,从 X-Forwarded-For 取真实 IP */
-  trustProxy?: boolean;
+  /**
+   * 反向代理设置:true 表示前面只有一层自己的代理(Caddy),取 X-Forwarded-For 最右边的地址;
+   * 'first' 表示托管平台(Render 等)前面有多层代理,取最左边的地址。
+   */
+  trustProxy?: boolean | 'first';
   /** 每个 IP 在一个时间窗口内允许输错兑换码的次数 */
   maxFailures?: number;
   failureWindowMs?: number;
+  /** 管理页密码;不设置则管理页关闭 */
+  adminToken?: string;
+  /** 卡密里写的网址;不设置则用请求里的域名 */
+  site?: string;
 }
 
 const MIME: Record<string, string> = {
@@ -72,7 +81,7 @@ export function createApp(opts: AppOptions): Server {
   const clientIp = (req: IncomingMessage) => {
     if (opts.trustProxy) {
       const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
-      if (fwd.length) return fwd[fwd.length - 1];
+      if (fwd.length) return opts.trustProxy === 'first' ? fwd[0] : fwd[fwd.length - 1];
     }
     return req.socket.remoteAddress ?? 'unknown';
   };
@@ -130,12 +139,55 @@ export function createApp(opts: AppOptions): Server {
       return send(res, 400, { ok: false, error: ERRORS.bad });
     }
 
-    const result = store.redeem(body.code, body.device);
+    const result = await store.redeem(body.code, body.device);
     if (!result.ok) {
       if (result.reason === 'invalid') fail(ip);
       return send(res, result.reason === 'invalid' ? 403 : 409, { ok: false, reason: result.reason, error: ERRORS[result.reason] });
     }
     send(res, 200, { ok: true, devicesLeft: result.devicesLeft, deep });
+  }
+
+  const sameSecret = (a: string, b: string) => {
+    const ha = createHash('sha256').update(a).digest();
+    const hb = createHash('sha256').update(b).digest();
+    return timingSafeEqual(ha, hb);
+  };
+
+  async function admin(req: IncomingMessage, res: ServerResponse) {
+    const ip = clientIp(req);
+    if (limited(ip)) return send(res, 429, { ok: false, error: ERRORS.limited });
+    const raw = await readBody(req, 4 * 1024);
+    let body: Record<string, unknown> = {};
+    try {
+      body = raw ? JSON.parse(raw) : {};
+    } catch {
+      /* 空 */
+    }
+    if (!opts.adminToken || typeof body.token !== 'string' || !sameSecret(body.token, opts.adminToken)) {
+      fail(ip);
+      return send(res, 403, { ok: false, error: '管理密码不对。' });
+    }
+    const code = typeof body.code === 'string' ? body.code : '';
+    switch (body.action) {
+      case 'create': {
+        const count = Number(body.count);
+        const batch = typeof body.batch === 'string' && /^[\w-]{1,32}$/.test(body.batch) ? body.batch : new Date().toISOString().slice(0, 10);
+        if (!Number.isInteger(count) || count < 1 || count > 500) return send(res, 400, { ok: false, error: '数量要在 1 到 500 之间。' });
+        const codes = await store.create(count, batch);
+        const host = opts.site || String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '');
+        return send(res, 200, { ok: true, lines: codes.map(c => (host ? `网址 https://${host}  兑换码 ${c}` : c)) });
+      }
+      case 'check':
+        return send(res, 200, { ok: true, record: await store.info(code) });
+      case 'reset':
+        return send(res, 200, { ok: true, message: (await store.reset(code)) ? '已清空设备，买家可以在新手机上重新输入。' : '没有这个兑换码', record: await store.info(code) });
+      case 'disable':
+        return send(res, 200, { ok: true, message: (await store.disable(code)) ? '已作废。' : '没有这个兑换码', record: await store.info(code) });
+      case 'stats':
+        return send(res, 200, { ok: true, stats: await store.stats() });
+      default:
+        return send(res, 400, { ok: false, error: '未知操作。' });
+    }
   }
 
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
@@ -174,6 +226,14 @@ export function createApp(opts: AppOptions): Server {
       return done(unlock(req, res));
     }
     if (url.pathname === '/api/health') return send(res, 200, { ok: true });
+    if (url.pathname === '/api/admin' && opts.adminToken) {
+      if (req.method !== 'POST') return send(res, 405, { ok: false, error: ERRORS.bad });
+      return done(admin(req, res));
+    }
+    if (url.pathname === '/admin' && opts.adminToken) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'referrer-policy': 'no-referrer' });
+      return res.end(ADMIN_PAGE);
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { ok: false, error: ERRORS.bad });
     return done(serveStatic(req, res, url.pathname));
   });

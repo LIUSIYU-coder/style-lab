@@ -4,7 +4,7 @@
 
 **免费部分**(整本书、人生签、选择报告)全部在浏览器里运行。**付费部分**是《人生说明书》:玩家买兑换码,读完后输入兑换码,由服务器根据出生参数、扉页信息和 24 个选择生成——你现在所在的这一页(按真实年龄)、你最近在意的那件事、六行底层代码逐行深读、三种处境下的你、四柱与大运、24 个选择批注(含没选的路)、四周小实验、"破晓时分的你"写来的信,附赠五章小说《你的这一天》。付费内容只在服务器上生成,不会打包进网页。
 
-**上线步骤见 [docs/deploy.md](docs/deploy.md)**(香港服务器 + 域名 + 一条命令部署 + 生成兑换码 + 小红书上架)。场景插画的 AI 绘图提示词见 [docs/scene-prompts.md](docs/scene-prompts.md)。
+**上线**:免费试水看 [docs/deploy-free.md](docs/deploy-free.md)(Render + Upstash,仓库根目录有 `render.yaml`);正式售卖看 [docs/deploy.md](docs/deploy.md)(香港服务器 + 域名 + 一条命令部署)。两种方式都有手机可用的管理页 `/admin`,用来生成兑换码。**场景插画**的完整生图需求见 [docs/image-brief.md](docs/image-brief.md)。
 
 ## 本地运行
 
@@ -22,7 +22,7 @@ npm start          # 启动服务器:托管 dist/ 并提供兑换接口,默认 h
 npm run codes -- make 10 test   # 生成 10 个测试兑换码,保存在 data/codes-test.csv
 ```
 
-服务器不依赖任何第三方包,需要 Node.js 22.18 以上(可以直接运行 `.ts`)。环境变量:`PORT`、`HOST`、`DATA_FILE`、`TRUST_PROXY=1`(在 Caddy 后面时)。
+服务器不依赖任何第三方包,需要 Node.js 22.18 以上(可以直接运行 `.ts`)。环境变量:`PORT`、`HOST`、`TRUST_PROXY`(`1`=自己的 Caddy 后面,`first`=Render 等托管平台)、`DATA_FILE`(本机文件存兑换码)或 `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`(Upstash 存兑换码)、`ADMIN_TOKEN`(开启 `/admin` 管理页,至少 12 位)、`SITE`(卡密里写的域名)。
 
 - 兑换码只存 SHA-256 摘要;每个码最多绑定 3 台设备,已绑定的设备可以反复解锁;同一 IP 输错 8 次暂停 15 分钟;无效请求不消耗兑换码。
 - 字体(霞鹜文楷屏幕版、马善政毛笔楷书,均为 SIL OFL 开源授权)随网页一起部署在自己的服务器上,按需加载切片,大陆网络和 iPhone 上都能显示书法字形。
@@ -57,7 +57,7 @@ npm run codes -- make 10 test   # 生成 10 个测试兑换码,保存在 data/co
 | `src/ui/scenes.ts` | 九种地点的 Canvas 动态画面,光线随钟点变化,回应手势 |
 | `src/ui/sound.ts` | Web Audio 现场合成的环境声和音效 |
 | `src/engine/reader.ts` | 扉页信息、现实困惑、亲手写的话、真实年龄 |
-| `server/` | 兑换服务器(`app.ts` 接口与静态文件,`codes.ts` 兑换码仓库) |
+| `server/` | 兑换服务器(`app.ts` 接口、管理接口与静态文件,`codes.ts` 兑换码仓库:本机文件或 Upstash,`admin-page.ts` 管理页) |
 | `scripts/codes.ts` | 兑换码管理:生成、查询、重置设备、作废、统计 |
 | `deploy/install.sh` | Ubuntu / Debian 一键部署(Node + Caddy HTTPS + systemd) |
 | `scripts/inline.mjs` | 把构建产物内联成单文件 |

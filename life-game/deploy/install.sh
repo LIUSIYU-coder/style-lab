@@ -55,6 +55,14 @@ npm run build
 chown -R lifecode:lifecode "$APP/data"
 chmod 700 "$APP/data"
 
+# 管理页密码:第一次部署时随机生成,保存在数据目录里,更新时沿用
+if [[ ! -s "$APP/data/admin-token" ]]; then
+  head -c 24 /dev/urandom | base64 | tr -d '/+=' > "$APP/data/admin-token"
+fi
+chown lifecode:lifecode "$APP/data/admin-token"
+chmod 600 "$APP/data/admin-token"
+ADMIN_TOKEN="$(cat "$APP/data/admin-token")"
+
 echo "==> 5/6 注册服务"
 cat > /etc/systemd/system/life-code.service <<UNIT
 [Unit]
@@ -64,7 +72,7 @@ After=network.target
 [Service]
 User=lifecode
 WorkingDirectory=$APP
-Environment=PORT=$PORT HOST=127.0.0.1 TRUST_PROXY=1 NODE_NO_WARNINGS=1
+Environment=PORT=$PORT HOST=127.0.0.1 TRUST_PROXY=1 NODE_NO_WARNINGS=1 SITE=$DOMAIN ADMIN_TOKEN=$ADMIN_TOKEN
 ExecStart=$(command -v node) server/main.ts
 Restart=always
 RestartSec=3
@@ -98,8 +106,9 @@ sleep 2
 if curl -fsS "http://127.0.0.1:$PORT/api/health" >/dev/null; then
   echo
   echo "部署完成:https://$DOMAIN"
-  echo "第一次申请证书可能要等一两分钟。生成兑换码:"
-  echo "  cd $APP && sudo -u lifecode SITE=$DOMAIN node scripts/codes.ts make 50 first"
+  echo "第一次申请证书可能要等一两分钟。"
+  echo "管理页(生成兑换码、查询、重置):https://$DOMAIN/admin"
+  echo "管理密码:$ADMIN_TOKEN (只有你知道,不要外传;以后可以用 sudo cat $APP/data/admin-token 再查看)"
 else
   echo "服务没有正常启动,查看日志:journalctl -u life-code -n 50"
   exit 1

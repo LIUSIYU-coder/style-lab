@@ -2,6 +2,8 @@
 
 全程用 iPhone 就能完成：服务器用阿里云网页上的「远程连接」操作，不需要电脑。
 
+> 想先免费试水？看 [deploy-free.md](deploy-free.md)（Render + Upstash，不用买服务器）。
+
 整体流程：**买服务器和域名 → 一条命令部署 → 生成兑换码 → 在小红书上架卡密商品 → 发视频引流**。
 
 ---
@@ -47,6 +49,10 @@ sudo bash deploy/install.sh 你的域名
 脚本会自动安装 Node.js 和 Caddy、构建网页、注册开机自启的服务，并自动申请 HTTPS 证书。看到「部署完成」后，用手机打开 `https://你的域名` 试玩一遍。
 
 ## 4. 生成兑换码
+
+**最简单的办法：用管理页。** 部署完成时脚本会打印管理页网址和管理密码，手机打开 `https://你的域名/admin`，填入密码就能生成、查询、重置、作废兑换码。忘了密码可以运行 `sudo cat /opt/life-code/data/admin-token` 查看。
+
+也可以用命令行：
 
 ```bash
 cd /opt/life-code

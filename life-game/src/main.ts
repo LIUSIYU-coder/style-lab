@@ -22,7 +22,7 @@ import { forgetCode, savedCode, unlock } from './unlock.ts';
 import { bindDeep, deepHtml } from './deep-view.ts';
 import { shareImage } from './share-image.ts';
 import { append, Book, choose, gestureButton, hold, reducedMotion, reveal, swipeUp, taps } from './ui/book.ts';
-import { mountScene, newSceneState, sceneDraw } from './ui/scenes.ts';
+import { AFTER_IMAGE, mountScene, newSceneState, sceneDraw } from './ui/scenes.ts';
 import { Sound } from './ui/sound.ts';
 import { propSvg } from './ui/props.ts';
 
@@ -397,16 +397,19 @@ function beatPage(g: Game): HTMLElement {
   const spec = { id: beat.id, place: beat.place, hour: beat.hour, rain: !!beat.rain };
 
   queueMicrotask(async () => {
-    let img: HTMLImageElement | null = null;
-    if (SCENE_IMAGES) {
-      img = await new Promise<HTMLImageElement | null>(res => {
+    const load = (src: string) =>
+      new Promise<HTMLImageElement | null>(res => {
         const im = new Image();
         im.onload = () => res(im);
         im.onerror = () => res(null);
-        im.src = `scenes/${beat.id}.jpg`;
+        im.src = src;
       });
+    let img: HTMLImageElement | null = null;
+    let after: HTMLImageElement | null = null;
+    if (SCENE_IMAGES) {
+      [img, after] = await Promise.all([load(`scenes/${beat.id}.jpg`), AFTER_IMAGE[beat.id] ? load(`scenes/${beat.id}-after.jpg`) : Promise.resolve(null)]);
     }
-    book.onLeave(mountScene(plate, sceneDraw(spec, state, img), reducedMotion()));
+    book.onLeave(mountScene(plate, sceneDraw(spec, state, img, after), reducedMotion()));
     Sound.ambience(beat.place, beat.hour, !!beat.rain);
 
     // 开场的小动作
@@ -740,7 +743,7 @@ async function openShare(g: Game, r: Report, age: number) {
       closing: `今年 ${age} 岁，正翻到这本书的 ${clockLabel(BEATS[beatIndexForAge(age)].hour)}。`,
       home: g.ctx.home,
       seed: g.code.seedHex.slice(2),
-      site: SHOP.site,
+      site: SHOP.site || (location.protocol === 'https:' && !/claude|anthropic/.test(location.host) ? location.host : ''),
       name: g.reader.name,
     });
     sheet.hidden = false;

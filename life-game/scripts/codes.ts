@@ -7,11 +7,11 @@
 //   node scripts/codes.ts stats                  统计
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { CodeStore, MAX_DEVICES } from '../server/codes.ts';
+import { backendFromEnv, CodeStore, MAX_DEVICES } from '../server/codes.ts';
 
 const root = join(import.meta.dirname, '..');
 const dataFile = process.env.DATA_FILE ?? join(root, 'data', 'codes.json');
-const store = new CodeStore(dataFile);
+const store = new CodeStore(backendFromEnv(dataFile));
 const [cmd, arg, arg2] = process.argv.slice(2);
 
 function usage(): never {
@@ -25,7 +25,7 @@ switch (cmd) {
     if (!Number.isInteger(n) || n < 1 || n > 5000) usage();
     const batch = arg2 ?? new Date().toISOString().slice(0, 10);
     if (!/^[\w-]{1,32}$/.test(batch)) usage();
-    const codes = store.create(n, batch);
+    const codes = await store.create(n, batch);
     const file = join(dirname(dataFile), `codes-${batch}.csv`);
     // 设置了 SITE 时，每一行卡密都带上网址，买家收到卡密就知道去哪里打开
     const site = process.env.SITE;
@@ -37,7 +37,7 @@ switch (cmd) {
   }
   case 'check': {
     if (!arg) usage();
-    const r = store.info(arg);
+    const r = await store.info(arg);
     if (!r) console.log('没有这个兑换码');
     else {
       console.log(`批次:${r.batch}  生成于:${r.created}`);
@@ -49,14 +49,14 @@ switch (cmd) {
   }
   case 'reset':
     if (!arg) usage();
-    console.log(store.reset(arg) ? '已清空绑定的设备,买家可以在新手机上重新输入。' : '没有这个兑换码');
+    console.log(await store.reset(arg) ? '已清空绑定的设备,买家可以在新手机上重新输入。' : '没有这个兑换码');
     break;
   case 'disable':
     if (!arg) usage();
-    console.log(store.disable(arg) ? '已作废。' : '没有这个兑换码');
+    console.log(await store.disable(arg) ? '已作废。' : '没有这个兑换码');
     break;
   case 'stats': {
-    const s = store.stats();
+    const s = await store.stats();
     console.log(`共 ${s.total} 个,已使用 ${s.used} 个`);
     for (const [b, v] of Object.entries(s.batches)) console.log(`  ${b}: ${v.used}/${v.total}`);
     break;
