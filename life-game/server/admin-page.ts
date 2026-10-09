@@ -19,7 +19,7 @@ button.ghost{background:transparent;color:var(--red)}
 .err{color:var(--red)}
 </style></head><body><main>
 <h1>人生之书 · 管理</h1>
-<section><h2>管理密码</h2><label for="token">部署时设置的 ADMIN_TOKEN，只保存在这个浏览器标签页里</label><input id="token" type="password" autocomplete="off"></section>
+<section><h2>管理密码</h2><label for="token">Render 里 ADMIN_TOKEN 的值。每次打开这个页面都要重新输入，页面不会记住它。</label><input id="token" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" name="lc-admin-token-field"><div class="row"><label style="display:flex;gap:8px;align-items:center;flex:none"><input type="checkbox" id="show" style="width:auto"> 显示密码</label><span class="out" id="tlen" style="flex:1"></span><button class="ghost" id="clr" type="button" style="flex:none">清空</button></div></section>
 <section><h2>生成兑换码</h2>
 <div class="row"><div><label for="count">数量</label><input id="count" type="number" min="1" max="500" value="20"></div><div><label for="batch">批次名</label><input id="batch" value=""></div></div>
 <button id="make">生成</button>
@@ -32,11 +32,13 @@ button.ghost{background:transparent;color:var(--red)}
 <section><h2>统计</h2><button id="stats">刷新</button><p class="out" id="stats-out"></p></section>
 </main><script>
 const $=s=>document.querySelector(s);
-try{$('#token').value=sessionStorage.getItem('lc-admin')||''}catch{}
+$('#token').value='';
+const tl=()=>{const n=$('#token').value.length;$('#tlen').textContent=n?('已输入 '+n+' 个字符'):''};
+$('#token').oninput=tl;$('#clr').onclick=()=>{$('#token').value='';tl();$('#token').focus()};
+$('#show').onchange=e=>{$('#token').type=e.target.checked?'text':'password'};
 $('#batch').value=new Date().toISOString().slice(0,10);
 async function call(body,out){
   const token=$('#token').value.trim();
-  try{sessionStorage.setItem('lc-admin',token)}catch{}
   out.className='out';out.textContent='处理中…';
   try{const r=await fetch('api/admin',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,token})});
     const d=await r.json();if(!d.ok){out.className='out err';out.textContent=d.error||'失败';return null}out.textContent='';return d}
