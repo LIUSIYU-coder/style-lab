@@ -19,22 +19,39 @@
       </div>
       <div class="dial-core"><span>0x</span></div>
     </div>
-    <p class="eyebrow">一局用出生时间编译的人生游戏</p>
-    <h1 class="title" id="intro-title" tabindex="-1">人生<br>底层代码</h1>
-    <p class="lede">输入出生时间,读取你的初始设定。<br>然后从童年开始,亲手做出十个选择。</p>
+    <p class="eyebrow">// life.source_code · v1.0</p>
+    <h1 class="title" id="intro-title" tabindex="-1">人生<br><em>底层代码</em></h1>
+    <p class="lede">用出生时间编译你的角色,<br>再从童年开始,亲手做出十个选择。</p>
+    <div class="tagline"><span class="chip cyan">四柱排盘</span><span class="chip magenta">10 个人生选择</span><span class="chip gold">选择画像</span></div>
     <button class="btn primary" type="button" id="btn-start">开始编译</button>
-    <p class="meta">约 3 分钟 · 10 个选择 · 结束后生成你的选择画像</p>
+    <p class="meta">PLAY TIME ≈ 3 MIN · 结束后生成可分享的角色卡</p>
     <p class="fine">出生信息只在你的浏览器里计算,不会上传。<br>剧情与分析均为虚构的娱乐内容。</p>
   </section>
 
   <section class="screen" id="screen-form" aria-labelledby="form-title" hidden>
-    <p class="eyebrow">第一步</p>
+    <p class="eyebrow">step 01 · input</p>
     <h2 class="h2" id="form-title" tabindex="-1">输入出生参数</h2>
     <form id="birth-form" class="form" novalidate>
-      <div class="field">
+      <fieldset class="field">
+        <legend>历法</legend>
+        <div class="seg">
+          <label class="seg-item" for="cal-solar"><input type="radio" id="cal-solar" name="calendar" value="solar" checked><span>公历</span></label>
+          <label class="seg-item" for="cal-lunar"><input type="radio" id="cal-lunar" name="calendar" value="lunar"><span>农历</span></label>
+        </div>
+      </fieldset>
+      <div class="field" id="solar-fields">
         <label for="birth-date">出生日期(公历)</label>
         <input type="date" id="birth-date" name="date" value="1998-08-16" min="1920-01-01" max="2026-12-31" required>
       </div>
+      <fieldset class="field" id="lunar-fields" hidden>
+        <legend>出生日期(农历)</legend>
+        <div class="tri">
+          <div class="sub"><label for="lunar-year">年</label><select id="lunar-year" name="lunarYear"></select></div>
+          <div class="sub"><label for="lunar-month">月</label><select id="lunar-month" name="lunarMonth"></select></div>
+          <div class="sub"><label for="lunar-day">日</label><select id="lunar-day" name="lunarDay"></select></div>
+        </div>
+        <p class="hint" id="lunar-preview" aria-live="polite"></p>
+      </fieldset>
       <div class="field">
         <label for="birth-time">出生时间(北京时间)</label>
         <input type="time" id="birth-time" name="time" value="09:30" required>
@@ -51,13 +68,16 @@
           <label class="seg-item" for="gender-male"><input type="radio" id="gender-male" name="gender" value="male" aria-describedby="gender-hint"><span>男</span></label>
         </div>
       </fieldset>
-      <div class="field">
-        <label for="birth-city">出生城市(可选)</label>
-        <select id="birth-city" name="city" aria-describedby="city-hint">
-          <option value="">不校正,按北京时间排盘</option>
-        </select>
-        <p class="hint" id="city-hint">选了城市会换算成当地真太阳时。1986–1991 年夏令时期间出生的,会自动扣除一小时。</p>
-      </div>
+      <fieldset class="field">
+        <legend>出生地(可选)</legend>
+        <div class="duo">
+          <div class="sub"><label for="birth-province">省份</label>
+            <select id="birth-province" name="province" aria-describedby="city-hint"><option value="">不校正</option></select></div>
+          <div class="sub"><label for="birth-city">城市 / 区县</label>
+            <select id="birth-city" name="city" aria-describedby="city-hint" disabled><option value="">先选省份</option></select></div>
+        </div>
+        <p class="hint" id="city-hint">选了出生地会换算成当地真太阳时;不选就按北京时间排盘。1986–1991 年夏令时期间出生的,会自动扣除一小时。港澳台和海外出生暂不支持。</p>
+      </fieldset>
       <p class="form-error" id="form-error" role="alert" hidden></p>
       <button class="btn primary" type="submit" id="btn-compile">读取底层代码</button>
       <p class="fine">示例日期仅作演示,请改成你自己的。</p>
@@ -66,7 +86,7 @@
   </section>
 
   <section class="screen" id="screen-decode" aria-labelledby="decode-title" hidden>
-    <p class="eyebrow">第二步</p>
+    <p class="eyebrow">step 02 · compile</p>
     <h2 class="h2" id="decode-title" tabindex="-1">正在编译</h2>
     <div class="terminal" role="log" aria-live="polite">
       <div class="term-bar"><i></i><i></i><i></i><span>life.code</span></div>

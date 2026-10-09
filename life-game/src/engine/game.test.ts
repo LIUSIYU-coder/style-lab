@@ -60,6 +60,8 @@ test('报告:标题、特征、证据和对比都生成', () => {
     assert.ok(report.title.startsWith(code.kernel));
     assert.ok(report.traits.length > 0);
     for (const t of report.traits) assert.ok(t.evidence.length > 0, t.pole);
+    const quoted = report.traits.map(t => t.evidence);
+    assert.equal(new Set(quoted).size, quoted.length, '各特征的证据应尽量不重复');
     assert.ok(report.contrast.text.includes(code.talent.name));
   }
 });

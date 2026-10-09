@@ -1,6 +1,8 @@
 # 人生底层代码(网页 demo)
 
-输入出生时间 → 排出四柱八字 → 生成游戏角色的"底层代码" → 从童年到而立做 10 个选择 → 生成可截图分享的「选择画像」。
+输入出生时间(公历或农历) → 排出四柱八字 → 生成游戏角色的"底层代码" → 从童年到而立做 10 个选择 → 生成可截图分享的「选择画像」。
+
+视觉风格是"赛博玄学":深紫夜色、青色和品红霓虹、发光符箓卡、游戏 HUD,只做深色一种主题。
 
 纯前端静态网页,不接 AI、不需要服务器、不收集任何数据。这一版用来**录屏发视频、看有没有人感兴趣**,还没有付费功能。
 
@@ -35,12 +37,15 @@ npm run build      # 产物在 dist/;另外生成单文件 dist/life-code.html
 | 路径 | 内容 |
 |---|---|
 | `src/engine/solar-time.ts` | 夏令时(1986–1991)与真太阳时校正 |
+| `src/engine/calendar.ts` | 农历 ↔ 公历换算(含闰月) |
+| `src/engine/regions.ts` | 31 个省级行政区、452 个市 / 区县的经度(脚本生成,勿手改) |
 | `src/engine/chart.ts` | 排盘:四柱、藏干、十神、五行占比、大运(调用 lunar-typescript) |
 | `src/engine/profile.ts` | 把排盘翻译成"底层代码":内核、属性、天赋模块、成长空间 |
 | `src/engine/story.ts` | 5 个人生阶段、15 个事件、6 个选择维度;按出生参数抽事件 |
 | `src/engine/report.ts` | 根据选择生成画像、证据、设定与选择的对比、小实验建议 |
 | `src/main.ts` / `src/style.css` | 界面 |
 | `scripts/inline.mjs` | 把构建产物内联成单文件 |
+| `scripts/regions.rq` / `scripts/build-regions.mjs` | 从 Wikidata 重新生成省市经度数据 |
 
 ## 排盘约定(已用测试固定)
 
@@ -48,7 +53,8 @@ npm run build      # 产物在 dist/;另外生成单文件 dist/life-code.html
 - 年柱、月柱以**节气**(立春等)交接时刻分界。
 - 测试里用 **tyme4ts 独立计算 3000 个随机时间**的四柱,与本项目结果逐一比对。
 - **夏令时**:1986–1991 年夏季出生的钟表时间先减 1 小时;区间已与 tz 数据库 `Asia/Shanghai` 比对。
-- **真太阳时**:可选出生城市,按经度差(每度 4 分钟)加时差方程换算,误差约 ±1 分钟。
+- **农历输入**:支持闰月,换算后按公历排盘;测试覆盖已知日期和 2000 个随机日期的往返换算。
+- **真太阳时**:可选"省份 → 城市 / 区县",按经度差(每度 4 分钟)加时差方程换算,误差约 ±1 分钟。
 - 输入一律按**北京时间**。港澳台和海外出生(不同时区、不同夏令时历史)暂不支持。
 
 ## 内容红线
@@ -68,3 +74,4 @@ npm run build      # 产物在 dist/;另外生成单文件 dist/life-code.html
 
 - [lunar-typescript](https://github.com/6tail/lunar-typescript)(MIT):排盘计算
 - [tyme4ts](https://github.com/6tail/tyme4ts)(MIT):仅测试中用于交叉验证
+- 省市坐标:[Wikidata](https://www.wikidata.org)(CC0)

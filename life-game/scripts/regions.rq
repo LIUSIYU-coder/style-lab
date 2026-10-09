@@ -1,0 +1,9 @@
+SELECT ?prov ?provName ?item ?name ?coord WHERE {
+  wd:Q148 wdt:P150 ?prov .
+  ?prov wdt:P150 ?item .
+  ?item wdt:P625 ?coord .
+  FILTER NOT EXISTS { ?item wdt:P576 ?d }
+  FILTER NOT EXISTS { ?prov wdt:P576 ?d2 }
+  OPTIONAL { ?item rdfs:label ?name FILTER(LANG(?name)="zh-hans") }
+  OPTIONAL { ?prov rdfs:label ?provName FILTER(LANG(?provName)="zh-hans") }
+}

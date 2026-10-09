@@ -86,10 +86,11 @@ export function buildReport(code: LifeCode, choices: Choice[]): Report {
   const top = ranked[0];
   const archetype = scores[top] === 0 ? BALANCED : ARCHETYPES[poleOf(top, scores[top])];
 
+  const used = new Set<Choice>();
   const traits = ranked
     .filter(a => scores[a] !== 0)
     .slice(0, 3)
-    .map(axis => ({ axis, pole: poleOf(axis, scores[axis]), score: scores[axis], evidence: evidenceFor(axis, scores[axis], choices) }));
+    .map(axis => ({ axis, pole: poleOf(axis, scores[axis]), score: scores[axis], evidence: evidenceFor(axis, scores[axis], choices, used) }));
 
   return {
     scores,
@@ -100,10 +101,13 @@ export function buildReport(code: LifeCode, choices: Choice[]): Report {
   };
 }
 
-function evidenceFor(axis: Axis, score: number, choices: Choice[]): string {
+/** 找一个体现该倾向的选择作为证据;尽量不和前面的特征重复引用同一个选择。 */
+function evidenceFor(axis: Axis, score: number, choices: Choice[], used: Set<Choice>): string {
   const sign = Math.sign(score);
-  const hit = choices.find(c => Math.sign(c.effects[axis] ?? 0) === sign);
+  const matches = choices.filter(c => Math.sign(c.effects[axis] ?? 0) === sign);
+  const hit = matches.find(c => !used.has(c)) ?? matches[0];
   if (!hit) return '';
+  used.add(hit);
   return `${hit.ages[0]}–${hit.ages[1]} 岁,你选择了「${hit.optionText}」。`;
 }
 
