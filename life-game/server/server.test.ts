@@ -66,6 +66,14 @@ async function storeScenario(backend: Backend) {
 test('兑换码(本机文件):生成、规范化、设备上限、重置、作废', () => storeScenario(new FileBackend(join(dir, 'a', 'codes.json'))));
 test('兑换码(Upstash):同样的流程', () => storeScenario(new UpstashBackend('https://example.upstash.io/', 't0ken', fakeUpstash())));
 
+test('Upstash 出问题时给出能看懂的原因', async () => {
+  const bad = (status: number) => (async () => new Response('{}', { status })) as typeof fetch;
+  await assert.rejects(new UpstashBackend('https://x.upstash.io', 'bad', bad(401)).get('h'), /令牌/);
+  await assert.rejects(new UpstashBackend('https://x.upstash.io', 'bad', bad(500)).get('h'), /500/);
+  const down = (async () => { throw new TypeError('fetch failed'); }) as typeof fetch;
+  await assert.rejects(new UpstashBackend('more-lynx.upstash.io', 'x', down).get('h'), /网址/);
+});
+
 test('接口:兑换深度解析、静态文件、限流', async () => {
   const dist = join(dir, 'dist');
   mkdirSync(join(dist, 'assets'), { recursive: true });

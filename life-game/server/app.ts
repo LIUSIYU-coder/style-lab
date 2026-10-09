@@ -11,7 +11,7 @@ import { buildReport, choiceOf } from '../src/engine/report.ts';
 import { buildDeepReport } from '../src/engine/deep.ts';
 import { parseBirthInput, parsePicks, parsePlace } from '../src/engine/validate.ts';
 import { ageOn, parseReader } from '../src/engine/reader.ts';
-import { CodeStore, isDeviceId, MAX_DEVICES } from './codes.ts';
+import { CodeStore, isDeviceId, MAX_DEVICES, UpstashError } from './codes.ts';
 import { ADMIN_PAGE } from './admin-page.ts';
 
 export interface AppOptions {
@@ -217,9 +217,11 @@ export function createApp(opts: AppOptions): Server {
 
   return createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
-    const done = (p: Promise<void>) => p.catch(() => {
-      if (!res.headersSent) send(res, 500, { ok: false, error: '服务器开小差了，请稍后再试。' });
-      else res.end();
+    const done = (p: Promise<void>) => p.catch(err => {
+      console.error('请求出错:', err instanceof Error ? err.message : err);
+      if (res.headersSent) return void res.end();
+      const msg = err instanceof UpstashError ? err.message : '服务器开小差了，请稍后再试。';
+      send(res, 500, { ok: false, error: msg });
     });
     if (url.pathname === '/api/unlock') {
       if (req.method !== 'POST') return send(res, 405, { ok: false, error: ERRORS.bad });

@@ -90,6 +90,9 @@ export class FileBackend implements Backend {
 
 type Fetch = typeof fetch;
 
+/** 数据库连接或权限问题,消息可以直接给管理员看(不含密钥) */
+export class UpstashError extends Error {}
+
 /** Upstash Redis(通过 REST 接口,不需要额外依赖)。每个兑换码一个键,另有一个集合记录全部键。 */
 export class UpstashBackend implements Backend {
   private readonly url: string;
@@ -105,15 +108,21 @@ export class UpstashBackend implements Backend {
   }
 
   private async pipeline(commands: Array<Array<string>>): Promise<unknown[]> {
-    const res = await this.fetcher(`${this.url}/pipeline`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${this.token}`, 'content-type': 'application/json' },
-      body: JSON.stringify(commands),
-    });
-    if (!res.ok) throw new Error(`Upstash 请求失败:${res.status}`);
+    let res: Response;
+    try {
+      res = await this.fetcher(`${this.url}/pipeline`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${this.token}`, 'content-type': 'application/json' },
+        body: JSON.stringify(commands),
+      });
+    } catch {
+      throw new UpstashError('连不上 Upstash:网址(UPSTASH_REDIS_REST_URL)格式不对,或者网络不通。网址应该是 https:// 开头,不带引号。');
+    }
+    if (res.status === 401 || res.status === 403) throw new UpstashError('Upstash 拒绝了令牌:UPSTASH_REDIS_REST_TOKEN 填错了,或者填成了只读令牌。请在 Upstash 页面不勾选 Read-Only Token 再复制。');
+    if (!res.ok) throw new UpstashError(`Upstash 返回了错误(${res.status})。`);
     const data = (await res.json()) as Array<{ result?: unknown; error?: string }>;
     return data.map(d => {
-      if (d.error) throw new Error(`Upstash 出错:${d.error}`);
+      if (d.error) throw new UpstashError(/NOPERM|permission/i.test(d.error) ? 'Upstash 令牌没有写入权限:请换成不是 Read-Only 的那个令牌。' : `Upstash 出错:${d.error}`);
       return d.result;
     });
   }
