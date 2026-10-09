@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
-<meta name="description" content="输入出生时间,读取你的人生初始设定,再亲手走完一段平行人生。">
+<meta name="description" content="输入出生时间，读取你的人生初始设定，再亲手走完一段平行人生。">
 <title>人生底层代码</title>
 </head>
 <body>
@@ -21,11 +21,12 @@
     </div>
     <p class="eyebrow">// life.source_code · v1.0</p>
     <h1 class="title" id="intro-title" tabindex="-1">人生<br><em>底层代码</em></h1>
-    <p class="lede">用出生时间编译你的角色,<br>再从童年开始,亲手做出十个选择。</p>
-    <div class="tagline"><span class="chip cyan">四柱排盘</span><span class="chip magenta">10 个人生选择</span><span class="chip gold">选择画像</span></div>
+    <p class="lede">把一生放进一天。<br>清晨 6 点出生，走到第二天破晓，<br>24 个小时，24 个选择。</p>
+    <div class="tagline"><span class="chip cyan">四柱排盘</span><span class="chip magenta">人生 24 小时</span><span class="chip gold">选择画像</span></div>
     <button class="btn primary" type="button" id="btn-start">开始编译</button>
-    <p class="meta">PLAY TIME ≈ 3 MIN · 结束后生成可分享的角色卡</p>
-    <p class="fine">出生信息只在你的浏览器里计算,不会上传。<br>剧情与分析均为虚构的娱乐内容。</p>
+    <button class="btn" type="button" id="btn-resume" hidden></button>
+    <p class="meta">PLAY TIME ≈ 6 MIN · 自动存档 · 结束后生成可分享的角色卡</p>
+    <p class="fine">出生信息只在你的浏览器里计算，不会上传。<br>剧情与分析均为虚构的娱乐内容。</p>
   </section>
 
   <section class="screen" id="screen-form" aria-labelledby="form-title" hidden>
@@ -40,11 +41,11 @@
         </div>
       </fieldset>
       <div class="field" id="solar-fields">
-        <label for="birth-date">出生日期(公历)</label>
+        <label for="birth-date">出生日期（公历）</label>
         <input type="date" id="birth-date" name="date" value="1998-08-16" min="1920-01-01" max="2026-12-31" required>
       </div>
       <fieldset class="field" id="lunar-fields" hidden>
-        <legend>出生日期(农历)</legend>
+        <legend>出生日期（农历）</legend>
         <div class="tri">
           <div class="sub"><label for="lunar-year">年</label><select id="lunar-year" name="lunarYear"></select></div>
           <div class="sub"><label for="lunar-month">月</label><select id="lunar-month" name="lunarMonth"></select></div>
@@ -53,11 +54,11 @@
         <p class="hint" id="lunar-preview" aria-live="polite"></p>
       </fieldset>
       <div class="field">
-        <label for="birth-time">出生时间(北京时间)</label>
+        <label for="birth-time">出生时间（北京时间）</label>
         <input type="time" id="birth-time" name="time" value="09:30" required>
         <label class="check" for="unknown-time">
           <input type="checkbox" id="unknown-time" name="unknownTime">
-          <span>不清楚具体时间,按中午 12:00 计算</span>
+          <span>不清楚具体时间，按中午 12:00 计算</span>
         </label>
       </div>
       <fieldset class="field">
@@ -69,18 +70,18 @@
         </div>
       </fieldset>
       <fieldset class="field">
-        <legend>出生地(可选)</legend>
+        <legend>出生地（可选）</legend>
         <div class="duo">
           <div class="sub"><label for="birth-province">省份</label>
             <select id="birth-province" name="province" aria-describedby="city-hint"><option value="">不校正</option></select></div>
           <div class="sub"><label for="birth-city">城市 / 区县</label>
             <select id="birth-city" name="city" aria-describedby="city-hint" disabled><option value="">先选省份</option></select></div>
         </div>
-        <p class="hint" id="city-hint">选了出生地会换算成当地真太阳时;不选就按北京时间排盘。1986–1991 年夏令时期间出生的,会自动扣除一小时。港澳台和海外出生暂不支持。</p>
+        <p class="hint" id="city-hint">选了出生地会换算成当地真太阳时；不选就按北京时间排盘。1986–1991 年夏令时期间出生的，会自动扣除一小时。港澳台和海外出生暂不支持。</p>
       </fieldset>
       <p class="form-error" id="form-error" role="alert" hidden></p>
       <button class="btn primary" type="submit" id="btn-compile">读取底层代码</button>
-      <p class="fine">示例日期仅作演示,请改成你自己的。</p>
+      <p class="fine">示例日期仅作演示，请改成你自己的。</p>
     </form>
     <button class="btn ghost" type="button" data-go="intro">返回</button>
   </section>

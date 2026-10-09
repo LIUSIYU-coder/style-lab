@@ -1,5 +1,5 @@
 // 出生时间校正:中国夏令时(1986–1991)与真太阳时。
-// 所有时间都按"墙上钟表时间"处理,不经过 Date 的本地时区,避免浏览器时区造成偏移。
+// 所有时间都按"墙上钟表时间"处理，不经过 Date 的本地时区，避免浏览器时区造成偏移。
 
 export interface WallTime {
   year: number;
@@ -25,7 +25,7 @@ function minutesOfYear(t: WallTime): number {
   return Date.UTC(t.year, t.month - 1, t.day, t.hour, t.minute) / 60000;
 }
 
-/** 这个钟表时间是否处在中国夏令时内(结束当天 01:00–02:00 的重复时段按夏令时处理)。 */
+/** 这个钟表时间是否处在中国夏令时内（结束当天 01:00–02:00 的重复时段按夏令时处理）。 */
 export function isChinaDst(t: WallTime): boolean {
   const rule = CHINA_DST.find(r => r[0] === t.year);
   if (!rule) return false;
@@ -36,7 +36,7 @@ export function isChinaDst(t: WallTime): boolean {
   return m >= start && m < end;
 }
 
-/** 时差方程(分钟):真太阳时 − 平太阳时,误差约 ±1 分钟,对排盘足够。 */
+/** 时差方程（分钟）:真太阳时 − 平太阳时，误差约 ±1 分钟，对排盘足够。 */
 export function equationOfTime(t: WallTime): number {
   const dayOfYear =
     (Date.UTC(t.year, t.month - 1, t.day) - Date.UTC(t.year, 0, 1)) / 86400000 + 1;
@@ -60,13 +60,13 @@ export interface Correction {
   time: WallTime;
   /** 夏令时扣掉的分钟数(0 或 60) */
   dstMinutes: number;
-  /** 经度修正 + 时差方程,合计分钟;未选城市时为 null */
+  /** 经度修正 + 时差方程，合计分钟；未选城市时为 null */
   solarMinutes: number | null;
 }
 
 /**
  * 输入按北京时间(UTC+8)填写的出生时间。
- * 先扣除夏令时;给了出生地经度时,再换算成当地真太阳时。
+ * 先扣除夏令时；给了出生地经度时，再换算成当地真太阳时。
  */
 export function correctBirthTime(t: WallTime, longitude: number | null): Correction {
   const dstMinutes = isChinaDst(t) ? 60 : 0;

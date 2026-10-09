@@ -1,5 +1,5 @@
 // "人生底层代码":把排盘结果翻译成游戏里的角色设定。
-// 文案只描述游戏角色的设定,不对现实中的人做任何预测。
+// 文案只描述游戏角色的设定，不对现实中的人做任何预测。
 import { ELEMENTS, type Chart, type Element, type Family } from './chart.ts';
 import { hashString } from './rng.ts';
 
@@ -12,24 +12,24 @@ export const ELEMENT_STAT: Record<Element, string> = {
 };
 
 const KERNELS: Record<string, { title: string; image: string; desc: string }> = {
-  甲: { title: '主干型', image: '参天大树', desc: '向上长,有主见,认准方向就不太回头。' },
-  乙: { title: '藤蔓型', image: '花草藤蔓', desc: '柔韧,会借力,在缝隙里也能找到路。' },
-  丙: { title: '恒星型', image: '正午太阳', desc: '热烈直接,习惯照亮周围的人。' },
-  丁: { title: '灯火型', image: '一盏灯火', desc: '细腻专注,光不大,但能照亮一个角落很久。' },
-  戊: { title: '山岳型', image: '高山大地', desc: '厚重可靠,别人愿意站在你身后。' },
-  己: { title: '田园型', image: '田园沃土', desc: '包容,会经营,能把小事养成大事。' },
-  庚: { title: '利刃型', image: '刀剑钢铁', desc: '果断讲效率,遇到问题想直接切开。' },
-  辛: { title: '珠玉型', image: '珠玉首饰', desc: '精致有标准,对细节和品质很在意。' },
-  壬: { title: '江河型', image: '江河大海', desc: '开阔爱流动,不喜欢被困在一个地方。' },
-  癸: { title: '雨露型', image: '雨露云雾', desc: '敏感细腻,影响别人的方式安静而持久。' },
+  甲: { title: '主干型', image: '参天大树', desc: '向上长，有主见，认准方向就不太回头。' },
+  乙: { title: '藤蔓型', image: '花草藤蔓', desc: '柔韧，会借力，在缝隙里也能找到路。' },
+  丙: { title: '恒星型', image: '正午太阳', desc: '热烈直接，习惯照亮周围的人。' },
+  丁: { title: '灯火型', image: '一盏灯火', desc: '细腻专注，光不大，但能照亮一个角落很久。' },
+  戊: { title: '山岳型', image: '高山大地', desc: '厚重可靠，别人愿意站在你身后。' },
+  己: { title: '田园型', image: '田园沃土', desc: '包容，会经营，能把小事养成大事。' },
+  庚: { title: '利刃型', image: '刀剑钢铁', desc: '果断讲效率，遇到问题想直接切开。' },
+  辛: { title: '珠玉型', image: '珠玉首饰', desc: '精致有标准，对细节和品质很在意。' },
+  壬: { title: '江河型', image: '江河大海', desc: '开阔爱流动，不喜欢被困在一个地方。' },
+  癸: { title: '雨露型', image: '雨露云雾', desc: '敏感细腻，影响别人的方式安静而持久。' },
 };
 
 export const TALENTS: Record<Family, { name: string; desc: string }> = {
-  比劫: { name: '自主模块', desc: '自己的事自己定,遇事第一反应是靠自己。' },
-  食伤: { name: '表达模块', desc: '想法多,喜欢输出、创造和被看见。' },
-  财星: { name: '务实模块', desc: '关注结果和手里的资源,擅长把事情落地。' },
-  官杀: { name: '秩序模块', desc: '对规则和责任敏感,压力下能扛事。' },
-  印星: { name: '学习模块', desc: '爱吸收、爱琢磨,需要一点安全感再出发。' },
+  比劫: { name: '自主模块', desc: '自己的事自己定，遇事第一反应是靠自己。' },
+  食伤: { name: '表达模块', desc: '想法多，喜欢输出、创造和被看见。' },
+  财星: { name: '务实模块', desc: '关注结果和手里的资源，擅长把事情落地。' },
+  官杀: { name: '秩序模块', desc: '对规则和责任敏感，压力下能扛事。' },
+  印星: { name: '学习模块', desc: '爱吸收、爱琢磨，需要一点安全感再出发。' },
 };
 
 export interface LifeCode {
@@ -63,13 +63,13 @@ export function buildLifeCode(chart: Chart): LifeCode {
     kernelImage: k.image,
     kernelDesc: k.desc,
     power: chart.strong
-      ? { label: '高功率运行', desc: '内核能量足,适合主动出击。' }
-      : { label: '节能运行', desc: '内核轻盈,擅长借力和协作。' },
+      ? { label: '高功率运行', desc: '内核能量足，适合主动出击。' }
+      : { label: '节能运行', desc: '内核轻盈，擅长借力和协作。' },
     talent: { family: chart.dominantFamily, ...talent },
     patch: {
       element: chart.weakestElement,
       stat: ELEMENT_STAT[chart.weakestElement],
-      desc: `「${ELEMENT_STAT[chart.weakestElement]}」是初始值最低的属性,也是这局游戏里成长空间最大的一项。`,
+      desc: `「${ELEMENT_STAT[chart.weakestElement]}」是初始值最低的属性，也是这局游戏里成长空间最大的一项。`,
     },
     stats: ELEMENTS.map(e => ({ element: e, stat: ELEMENT_STAT[e], value: chart.elements[e] })),
     seed,
