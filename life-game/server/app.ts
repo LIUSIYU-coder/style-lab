@@ -9,6 +9,7 @@ import { replayStory, storyContext } from '../src/engine/story.ts';
 import { buildReport, choiceOf } from '../src/engine/report.ts';
 import { buildDeepReport } from '../src/engine/deep.ts';
 import { parseBirthInput, parsePicks, parsePlace } from '../src/engine/validate.ts';
+import { ageOn, parseReader } from '../src/engine/reader.ts';
 import { CodeStore, isDeviceId, MAX_DEVICES } from './codes.ts';
 
 export interface AppOptions {
@@ -109,7 +110,8 @@ export function createApp(opts: AppOptions): Server {
     const input = parseBirthInput(body.input);
     const place = parsePlace(body.place);
     const picks = parsePicks(body.picks, true);
-    if (typeof body.code !== 'string' || !isDeviceId(body.device) || !input || place === undefined) {
+    const reader = parseReader(body.reader ?? { carer: '外婆' });
+    if (typeof body.code !== 'string' || !isDeviceId(body.device) || !input || place === undefined || !reader) {
       return send(res, 400, { ok: false, error: ERRORS.bad });
     }
     if (!picks) return send(res, 400, { ok: false, error: ERRORS.incomplete });
@@ -119,11 +121,11 @@ export function createApp(opts: AppOptions): Server {
     try {
       const chart = computeChart(input);
       const code = buildLifeCode(chart);
-      const ctx = storyContext(code.seed, place);
+      const ctx = storyContext(code.seed, place, reader.carer);
       const { steps } = replayStory(ctx, picks);
       if (steps.length !== picks.length) return send(res, 400, { ok: false, error: ERRORS.incomplete });
       const report = buildReport(chart, code, steps.map(s => choiceOf(s.resolved, s.option)));
-      deep = buildDeepReport({ chart, code, ctx, picks, report });
+      deep = buildDeepReport({ chart, code, ctx, picks, report, reader, age: ageOn(input.time) });
     } catch {
       return send(res, 400, { ok: false, error: ERRORS.bad });
     }

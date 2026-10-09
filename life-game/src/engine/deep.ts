@@ -5,10 +5,11 @@ import type { Chart, Element, Pillar } from './chart.ts';
 import { generatedBy, generates, controls, stemElement } from './chart.ts';
 import { ELEMENT_STAT, KERNELS, type LifeCode } from './profile.ts';
 import {
-  AXES, AXIS_POLES, BEATS, STAGES, agesLabel, clockLabel, fill, resolveBeat,
+  AXES, AXIS_POLES, BEATS, STAGES, agesLabel, beatIndexForAge, clockLabel, fill, initialFlags, resolveBeat,
   type Axis, type Effects, type ResolvedOption, type StoryContext,
 } from './story.ts';
 import { ARCHETYPES, BALANCED, poleOf, settingLeans, type Archetype, type Report } from './report.ts';
+import type { ConcernKey, Reader } from './reader.ts';
 
 /* ================= 一、《你的这一天》:每个选项一段旁白 ================= */
 
@@ -30,7 +31,7 @@ const PROSE: Record<string, string> = {
   'rain:a': '你走过去，把伞往 TA 那边斜了斜。那年你才五六岁，已经懂得把好东西分出去一半。',
   'rain:b': '你冒着雨跑回家，拿来一条干毛巾。你不太会说安慰的话，但你知道该做点什么。',
   'rain:c': '你站在原地，没有动。不是不在乎，只是那时的你，还不知道怎么开口。',
-  'rain:d': '你拉着外婆的衣角，一起走向那个陌生的孩子。你知道自己一个人不够，但可以去找帮手。',
+  'rain:d': '你拉着{carer}的衣角，一起走向那个陌生的孩子。你知道自己一个人不够，但可以去找帮手。',
 
   'breakfast:a': '你把零花钱换成两个热乎乎的肉包，一个塞进{friend}手里。那时你还不懂什么叫分享，只知道好吃的东西，两个人吃更香。',
   'breakfast:b': '你把零花钱攥在手心，一路攥回家，放进床底下的铁皮盒。盒子一天天变沉，你的耐心也是。',
@@ -42,9 +43,9 @@ const PROSE: Record<string, string> = {
   'festival:c': '你没有上台，躲在后台剪纸、粘胶水。灯光不在你身上，可那台晚会的每个角落都有你的手艺。',
   'festival:d': '你报了一个从没碰过的节目。你也说不清为什么，大概就是想试试，不会的东西到底有多难。',
 
-  'noodles:a': '你搬来小板凳，站在灶台边，盯着外婆的每一个动作，生怕漏掉一步。',
-  'noodles:b': '你不看外婆，按自己的想法往锅里放调料。你从小就想知道，如果换一种做法，会是什么味道。',
-  'noodles:c': '你守在灶台边，只负责尝。那时你以为，外婆会一直在厨房里，一直等着你说"下次再学"。',
+  'noodles:a': '你搬来小板凳，站在灶台边，盯着{carer}的每一个动作，生怕漏掉一步。',
+  'noodles:b': '你不看{carer}，按自己的想法往锅里放调料。你从小就想知道，如果换一种做法，会是什么味道。',
+  'noodles:c': '你守在灶台边，只负责尝。那时你以为，{carer}会一直在厨房里，一直等着你说"下次再学"。',
   'noodles:d': '你学会的第二天，就端着一碗面去找{friend}。学到的东西，你总想第一时间拿给在乎的人看。',
 
   'middleschool:a': '午休铃一响，你就跑向{friend}的教室。分了班又怎样，你想让一些东西保持原样。',
@@ -58,11 +59,11 @@ const PROSE: Record<string, string> = {
 
   'subject:a': '你没有摔门，也没有让步。你第一次发现，坚持一件事，需要的不只是倔强，还有说服人的耐心。',
   'subject:b': '你把那个想选的方向咽了回去。你没有放下{hobby}，只是学会了在现实里给喜欢留一块地方。',
-  'subject:c': '你没有急着决定，而是去找了外婆。遇到大事，你习惯先找一个信得过的人，听听不一样的声音。',
+  'subject:c': '你没有急着决定，而是去找了{carer}。遇到大事，你习惯先找一个信得过的人，听听不一样的声音。',
   'subject:d': '你表面上点了头，心里却没有放下。你给自己留了一条后路。',
 
   'exam:a': '你没有再碰新题。把熟悉的东西再摸一遍，心才会落地。',
-  'exam:b': '你放下书，扶外婆下楼坐了一会儿。晚风吹过来，你忽然觉得，明天的事，明天再说。',
+  'exam:b': '你放下书，扶{carer}下楼坐了一会儿。晚风吹过来，你忽然觉得，明天的事，明天再说。',
   'exam:c': '你拿起手机，想找个人说说话，第一个想到的就是{friend}。',
   'exam:d': '你早早关了灯。你知道最后一晚多看两页书没什么用，把自己照顾好，才是最要紧的准备。',
 
@@ -80,14 +81,14 @@ const PROSE: Record<string, string> = {
   'crossroad:a': '你回了{home}。不是退回来，是你终于想明白，自己要的生活长什么样。',
   'crossroad:b': '你留在了{far}。这座城市不再是"外面"，它慢慢有了你的痕迹。',
   'crossroad:c': '你决定再换一座城市。从头开始这件事，你已经不陌生了。',
-  'crossroad:d': '你在地铁上拨通了外婆的电话。很多年过去，遇到岔路口，你还是会先听听她的声音。',
+  'crossroad:d': '你在地铁上拨通了{carer}的电话。很多年过去，遇到岔路口，你还是会先听听{ta}的声音。',
   'crossroad:e': '你收拾行李，去了{far}。走出巷口那一刻，你没有回头——你怕一回头，就舍不得走了。',
   'crossroad:f': '你留在了{home}。熟悉的街、熟悉的人，你选择把根扎深一点。',
   'crossroad:g': '你请了几天假，先去{far}看了看。你不想凭一通电话做决定，要亲眼看见才算数。',
   'crossroad:h': '你劝{friend}回{home}来。你嘴上说的是这边也有机会，心里想的是：我们好久没一起吃饭了。',
 
   'firsthome:a': '你花了一整个周末，跑了三趟家具市场。在陌生的城市里，你想给自己搭一个窝。',
-  'firsthome:b': '你翻开那个跟了你很多年的小本子，做了第一碗番茄鸡蛋面。热气升起来的时候，你好像又站在了外婆的厨房里。',
+  'firsthome:b': '你翻开那个跟了你很多年的小本子，做了第一碗番茄鸡蛋面。热气升起来的时候，你好像又站在了{carer}的厨房里。',
   'firsthome:c': '你从楼下面馆端回一碗面，坐在窗边慢慢吃。晚霞把屋子染成橘色，你觉得这样也挺好。',
   'firsthome:d': '你对屋子没什么讲究，把钱攒下来去看更大的世界。家对你来说，是一个可以随时出发的地方。',
   'firsthome:e': '你在群里喊了一声，几个同事拎着菜就来了。',
@@ -110,13 +111,13 @@ const PROSE: Record<string, string> = {
   'oldfriend:g': '你点点头，转身走进人群。有些人适合放在回忆里，你没有打扰。',
   'oldfriend:h': '第二天，你又特意绕到那条街。你嘴上不说，心里一直惦记着。',
 
-  'newyear:a': '你放下筷子，从头讲起。在她面前，你不需要假装过得很好。',
-  'newyear:b': '你只挑好的说，难处一个字都没提。你想让她放心——这是你长大以后学会的温柔。',
-  'newyear:c': '你拉着外婆一起包饺子。手上忙着，话就不用说太多，你们都懂。',
-  'newyear:d': '你提议明年春天带外婆出去走走。你开始意识到，有些事不能总说"以后"。',
+  'newyear:a': '你放下筷子，从头讲起。在{ta}面前，你不需要假装过得很好。',
+  'newyear:b': '你只挑好的说，难处一个字都没提。你想让{ta}放心——这是你长大以后学会的温柔。',
+  'newyear:c': '你拉着{carer}一起包饺子。手上忙着，话就不用说太多，你们都懂。',
+  'newyear:d': '你提议明年春天带{carer}出去走走。你开始意识到，有些事不能总说"以后"。',
 
   'latenight:a': '你买了一份关东煮，坐在便利店的窗边慢慢吃。这一天总算过去了，你允许自己什么都不想。',
-  'latenight:b': '你在街边给外婆回了一个视频。屏幕那头一阵手忙脚乱，你笑得眼角都湿了。',
+  'latenight:b': '你在街边给{carer}回了一个视频。屏幕那头一阵手忙脚乱，你笑得眼角都湿了。',
   'latenight:c': '你回到家，把明天要做的事一条条写下来。把事情排好，你才睡得着。',
   'latenight:d': '你和便利店的店员聊了几句。深夜的城市里，两个陌生人的几句闲话，也能让人暖和一点。',
 
@@ -136,15 +137,15 @@ const PROSE: Record<string, string> = {
   'mentor:c': '你没有去打扰。你记得自己年轻时也是这样，需要一个人待一会儿，才能重新站起来。',
   'mentor:d': '你拉 TA 下楼吃了一碗热汤面。很多年前，也有人这样拉过你。',
 
-  'grandma:a': '你翻开那个小本子，照着外婆当年教的，一步一步做。本子上的字迹已经发黄，味道却一点没变。',
-  'grandma:b': '你请外婆再教你一次。很多年前没学会的，这一次你不想再错过。',
-  'grandma:c': '你搬回去，陪她住了一段日子。你小时候是她守着你，现在换你守着她。',
-  'grandma:d': '你拿出手机，把她讲的老故事一段段录下来。你想把她的声音，留得久一点。',
-  'grandma:e': '你陪着外婆，坐了很久的车，去看她年轻时住过的地方。一路上，她像个孩子一样趴在车窗边。',
+  'grandma:a': '你翻开那个小本子，照着{carer}当年教的，一步一步做。本子上的字迹已经发黄，味道却一点没变。',
+  'grandma:b': '你请{carer}再教你一次。很多年前没学会的，这一次你不想再错过。',
+  'grandma:c': '你搬回去，陪{ta}住了一段日子。你小时候是{ta}守着你，现在换你守着{ta}。',
+  'grandma:d': '你拿出手机，把{ta}讲的老故事一段段录下来。你想把{ta}的声音，留得久一点。',
+  'grandma:e': '你陪着{carer}，坐了很久的车，去看{ta}年轻时住过的地方。一路上，{ta}像个孩子一样趴在车窗边。',
 
   'retire:a': '你背上包，去了年轻时一直想去的地方。闹钟终于不用响了，你想把欠自己的时间补回来。',
   'retire:b': '你报了一个{hobby}班。从头学起，一点也不丢人。',
-  'retire:c': '你在巷子里盘下一间小铺面，用的是外婆的方子。你想让更多人尝尝那碗面。',
+  'retire:c': '你在巷子里盘下一间小铺面，用的是{carer}的方子。你想让更多人尝尝那碗面。',
   'retire:d': '你拿着工具箱，在小区里帮大家修修补补。被人需要，是你闲不下来的理由。',
   'retire:e': '你每天早上去公园，和老朋友们碰头。日子终于慢了下来。',
 
@@ -161,7 +162,7 @@ const PROSE: Record<string, string> = {
 
 /** 每一章的开头和结尾 */
 const CHAPTER_OPEN = [
-  '故事从{home}的一个清晨开始。那时候的天很亮，日子很长，外婆的风铃挂在窗边。',
+  '故事从{home}的一个清晨开始。那时候的天很亮，日子很长，{carer}的风铃挂在窗边。',
   '午后的阳光晒得人发懒，可这几年一点也不懒——你在长个子，也在长主意。',
   '傍晚，城市的灯一盏盏亮起来。你开始自己付房租、自己拿主意，也开始知道，选择是有代价的。',
   '夜深了。年轻时以为很远的事，一件件走到了眼前：告别、交接、照顾和被照顾。',
@@ -287,6 +288,83 @@ const ELEMENT_PRACTICE: Record<Element, { title: string; steps: [string, string,
   水: { title: '给「洞察」留扇窗', steps: ['每天睡前花五分钟，回想今天印象最深的一件事', '问自己：我当时为什么那样反应', '一周后读一遍，找找有没有重复出现的模式'] },
 };
 
+/* ================= 六、说明书新增:现在这一页、现实困惑、逐行深读 ================= */
+
+/** 每个人生阶段在现实里通常面对的事(只描述常见处境,不做判断) */
+const STAGE_NOW: string[] = [
+  '这一页还在清晨。世界很大，规矩还没有那么多，你正在慢慢认出自己喜欢什么。',
+  '这一页在午后。你正在长主意：选方向、离开或留下、第一次替自己做大的决定。',
+  '这一页在傍晚。工作、住处、身边的人，很多事开始由你自己来安排，也开始知道选择是有代价的。',
+  '这一页在深夜。你开始接住上一代交过来的东西，也开始被下一代需要。',
+  '这一页在破晓。走过的路都在身后，你更在意的是怎么把日子过得踏实、过得像自己。',
+];
+
+/** 现实困惑:看哪两条维度,以及每一侧倾向在这件事上的提醒 */
+const CONCERN: Record<ConcernKey, { title: string; open: string; axes: [Axis, Axis]; tips: Record<string, string> }> = {
+  work: {
+    title: '工作和以后的方向',
+    open: '你说最近最在意的是工作和以后的方向。在这一局里，和这件事最相关的是你怎么面对风险、怎么安排时间。',
+    axes: ['risk', 'time'],
+    tips: {
+      冒险: '你愿意为可能性下注，这在换方向时是很大的优势。给自己划一条底线：最多投入多少时间和钱去试，到了就停下来复盘，而不是一直往里加。',
+      稳妥: '你习惯先把地基打牢。不妨把"换方向"拆成不伤筋动骨的小实验：一个周末的副业、一门短课、一次和同行的聊天，用小代价换真实的信息。',
+      远谋: '你愿意为以后的自己投资。提醒自己给计划设一个"检查点"：三个月后回头看看，这条路是不是还值得，别让计划替你做所有决定。',
+      当下: '你更看重眼前的体验，这让你不容易被焦虑绑架。可以只给以后定一件很小的事，比如每周花一小时了解一个想去的方向。',
+    },
+  },
+  people: {
+    title: '和身边人的相处',
+    open: '你说最近最在意的是和身边人的相处。在这一局里，和这件事最相关的是你怎么拿捏远近、怎么表达感受。',
+    axes: ['self', 'emo'],
+    tips: {
+      独立: '你习惯自己扛事，别人会觉得你靠得住，也可能觉得你有点远。试着在小事上请别人帮一次忙，关系往往是在"被需要"里变近的。',
+      联结: '你很会照顾别人的感受。留意一下自己是不是总在让步：说一次"这次我想按我的来"，好的关系接得住。',
+      外放: '你的感受写在脸上，身边的人很容易读懂你。情绪上头的时候，先停十分钟再说要紧的话，会少很多误会。',
+      内收: '你习惯把事放在心里自己消化。挑一个信得过的人，把一件小小的心事讲出来，你会发现对方比你想象中更愿意听。',
+    },
+  },
+  self: {
+    title: '自己的状态和情绪',
+    open: '你说最近最在意的是自己的状态和情绪。在这一局里，和这件事最相关的是你怎么处理情绪、怎么在想和做之间切换。',
+    axes: ['emo', 'act'],
+    tips: {
+      外放: '你的情绪来得快，也去得快。给它一个出口：走路、写几行字、找人说说，比憋着或者硬压下去都好。',
+      内收: '你很能扛，但扛久了会累。每天留十分钟什么都不做，只问自己一句"我现在其实感觉怎么样"。',
+      行动: '你习惯用做事来消化情绪。累的时候允许自己停一下，休息不是偷懒，是给下一次出发充电。',
+      思考: '你容易在脑子里反复推演。当一件事想到第三遍的时候，就去做一个最小的动作，动起来往往比想清楚更能让人安心。',
+    },
+  },
+  family: {
+    title: '家里的人和事',
+    open: '你说最近最在意的是家里的人和事。在这一局里，和这件事最相关的是你怎么在自己和家人之间拿捏分寸、怎么看待"家里的规矩"。',
+    axes: ['self', 'rule'],
+    tips: {
+      独立: '你很早就学会自己拿主意。和家人意见不同时，先说"我明白你们担心什么"，再说你的打算，会顺利很多。',
+      联结: '你总是把家里人放在心上。照顾别人的同时，也把自己的需要说出来，家人其实也想知道你过得好不好。',
+      破格: '你不太愿意被老规矩框住。有些规矩背后是上一代的不安，弄懂了那份不安，改起来就没那么难。',
+      守序: '你尊重家里的规矩，也愿意担责任。偶尔让自己"不那么懂事"一次，家人更需要的是一个真实的你。',
+    },
+  },
+  change: {
+    title: '想改变，却一直没开始',
+    open: '你说最近最在意的是想改变却一直没开始。在这一局里，和这件事最相关的是你怎么从想到做、怎么面对不确定。',
+    axes: ['act', 'risk'],
+    tips: {
+      行动: '你其实不缺行动力，可能只是还没选定先改哪一件。把想改的事写下来，只留一件，明天就做它的第一步。',
+      思考: '你习惯想清楚再动，这次反过来试试：先做一个十五分钟就能完成的小动作，让身体带着脑子走。',
+      冒险: '你不怕变化，怕的可能是变化不够大。从一个小改变开始也算数，它会给你下一次更大的改变攒底气。',
+      稳妥: '你想要一个稳妥的开始。那就先给改变留一条退路：可以随时停、停了也没损失，开始就没那么难了。',
+    },
+  },
+};
+
+/** 设定与选择的三种关系 */
+const VERDICT_TEXT: Record<'顺写' | '改写' | '自由', (setting: string, choice: string) => string> = {
+  顺写: (setting) => `你顺着出生设定在走：天性里就偏「${setting}」，关键时刻你也一直这样选。好处是自然、不拧巴，这是你最省力的一种活法；要留意的是，同一种打法用久了，容易忘了还有别的选项。`,
+  改写: (setting, choice) => `你改写了出生设定：天性里偏「${setting}」，可关键时刻你一次次选了「${choice}」。这通常不是偶然，要么是后来的经历教会了你，要么是你心里一直想成为另一种人。这一行，是你亲手写的。`,
+  自由: (_s, choice) => (choice === '平衡' ? '这一行，设定没有替你做决定，你的选择也没有固定偏向。这是你最自由的一块，可以按处境随时换打法。' : `这一行，出生设定没有明显偏向，是你自己选成了「${choice}」。这是你后天长出来的样子。`),
+};
+
 /* ================= 组装 ================= */
 
 export interface DeepChapter {
@@ -299,6 +377,12 @@ export interface DeepReport {
   title: string;
   /** 一句话总结 */
   summary: string;
+  /** 第一节:你现在所在的这一页 */
+  now: { age: number; clock: string; stage: string; chose: string | null; text: string[]; concern: { title: string; text: string[] } | null };
+  /** 第二节:六行底层代码逐行深读 */
+  rewrites: Array<{ title: string; verdict: '顺写' | '改写' | '自由'; setting: string; choice: string; text: string[] }>;
+  /** 你亲手写下的话 */
+  lines: Array<{ label: string; text: string }>;
   novel: DeepChapter[];
   epilogue: string[];
   pillars: Array<{ label: string; ganZhi: string; name: string; naYin: string; text: string[] }>;
@@ -330,6 +414,7 @@ function effectTags(e: Effects): string[] {
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
+const CARER_TA_TEXT: Record<string, string> = { 外婆: '她', 奶奶: '她', 妈妈: '她', 外公: '他', 爷爷: '他', 爸爸: '他' };
 
 export interface DeepInput {
   chart: Chart;
@@ -338,11 +423,14 @@ export interface DeepInput {
   /** 每一步所选选项的编号,必须完整 24 步 */
   picks: readonly string[];
   report: Report;
+  reader: Reader;
+  /** 现在的周岁 */
+  age: number;
 }
 
 /** 生成深度解析。picks 不完整或有误时抛错。 */
-export function buildDeepReport({ chart, code, ctx, picks, report }: DeepInput): DeepReport {
-  const flags = new Set<string>();
+export function buildDeepReport({ chart, code, ctx, picks, report, reader, age }: DeepInput): DeepReport {
+  const flags = initialFlags(ctx);
   const steps: Array<{ index: number; text: string; option: ResolvedOption; others: ResolvedOption[]; prose: string }> = [];
   for (let i = 0; i < BEATS.length; i++) {
     const r = resolveBeat(i, ctx, flags);
@@ -374,11 +462,11 @@ export function buildDeepReport({ chart, code, ctx, picks, report }: DeepInput):
   // 尾声:根据一路留下的线索
   const epilogue: string[] = [];
   const memory: string[] = [];
-  if (flags.has('recipe')) memory.push('外婆那碗番茄鸡蛋面的做法，你记了一辈子');
+  if (flags.has('recipe')) memory.push(`${ctx.carer}那碗番茄鸡蛋面的做法，你记了一辈子`);
   if (flags.has('close')) memory.push(`那个雨天认识的${ctx.friend}，一直走在你身边`);
   if (flags.has('stall')) memory.push('巷口那个早餐摊，有一部分是你撑起来的');
   if (flags.has('startup')) memory.push('你年轻时赌过一把，也扛下了后果');
-  if (flags.has('trip')) memory.push('你兑现过一个带外婆出门的约定');
+  if (flags.has('trip')) memory.push(`你兑现过一个带${ctx.carer}出门的约定`);
   if (flags.has('back')) memory.push(`你走出过${ctx.home}，又自己选择了回来`);
   else if (flags.has('left')) memory.push(`你从${ctx.home}出发，在${ctx.far}扎下了根`);
   else if (flags.has('stayed')) memory.push(`你一直守在${ctx.home}，守着那些熟悉的人和街`);
@@ -479,21 +567,68 @@ export function buildDeepReport({ chart, code, ctx, picks, report }: DeepInput):
   const ep = ELEMENT_PRACTICE[code.patch.element];
   weeks.push({ week: 4, title: ep.title, why: `「${ELEMENT_STAT[code.patch.element]}」是你初始值最低的属性，这周专门给它加点。`, steps: [...ep.steps] });
 
+  // 八、现在这一页
+  const nowI = beatIndexForAge(age);
+  const nowBeat = BEATS[nowI];
+  const nowStep = steps[nowI];
+  const nowYun = chart.daYun.find(d => age >= d.startAge && age <= d.endAge);
+  const nowText = [
+    `${reader.name || '你'}今年 ${age} 岁。在这本书里，这个年纪落在 ${pad(nowBeat.hour)}:00，第${'一二三四五'[nowBeat.stage]}章「${STAGES[nowBeat.stage].timeOfDay}」。`,
+    STAGE_NOW[nowBeat.stage],
+    nowStep ? `在这一页，你选了「${nowStep.option.text}」。${effectTags(nowStep.option.effects).length ? `这一步往「${effectTags(nowStep.option.effects).join('」「')}」走了一点。` : ''}` : '',
+    nowYun ? `按出生设定，这几年是「${nowYun.ganZhi}」大运，是一段「${RELATION[relationKey(chart.dayMaster.element, stemElement(nowYun.ganZhi[0]))].name}」的章节。这是游戏的章节背景，用来对照你的选择，不是对现实的判断。` : '',
+  ].filter(Boolean);
+  let concern: DeepReport['now']['concern'] = null;
+  if (reader.concern) {
+    const c = CONCERN[reader.concern];
+    const text = [c.open];
+    for (const ax of c.axes) {
+      const sc = report.scores[ax];
+      const pole = sc === 0 ? null : poleOf(ax, sc);
+      if (pole) text.push(`你在「${AXIS_POLES[ax].join(' / ')}」上偏「${pole}」。${c.tips[pole]}`);
+      else text.push(`你在「${AXIS_POLES[ax].join(' / ')}」上没有明显偏向，${c.tips[AXIS_POLES[ax][0]]}`);
+    }
+    concern = { title: c.title, text };
+  }
+
+  // 九、六行逐行深读
+  const rewrites = report.rewrites.map(rw => {
+    const sign = report.scores[rw.axis] === 0 ? 0 : Math.sign(report.scores[rw.axis]);
+    const ev = sign === 0 ? [] : steps.filter(s => Math.sign(s.option.effects[rw.axis] ?? 0) === sign).slice(0, 2);
+    const text = [
+      rw.setting === '中立' ? `出生设定：${rw.reason}，这一行没有偏向。` : `出生设定：${rw.reason}，初始值偏「${rw.setting}」。`,
+      ev.length ? `你的选择：比如 ${ev.map(s => `${pad(BEATS[s.index].hour)}:00 选了「${s.option.text}」`).join('，')}。` : '你的选择：两边都选过，没有固定方向。',
+      VERDICT_TEXT[rw.verdict](rw.setting, rw.choice),
+      rw.choice !== '平衡' ? PATTERN[rw.choice] : PATTERN_BALANCED[rw.axis],
+    ];
+    return { title: AXIS_POLES[rw.axis].join(' / '), verdict: rw.verdict, setting: rw.setting, choice: rw.choice, text };
+  });
+
+  // 十、亲手写下的话
+  const lines: DeepReport['lines'] = [];
+  if (reader.lines.carer) lines.push({ label: `21:00，你写给${ctx.carer}的话`, text: reader.lines.carer });
+  if (reader.lines.dawn) lines.push({ label: '05:00，你写给小时候的自己', text: reader.lines.dawn });
+
   // 七、写给现在的你
   const dawn = steps[steps.length - 1];
   const turning = report.moments[0];
   const letter = [
-    '写给现在的你：',
+    `写给现在的${reader.name || '你'}：`,
     `我是破晓时分的你。我刚刚走完一整天，从${ctx.home}的那个清晨，一直走到现在。`,
     turning ? `回头看，我最记得的是 ${turning.clock} 那一刻，${turning.agesLabel}，我选了「${turning.optionText}」。那时候没想那么多，后来才知道，很多事是从那里开始的。` : '回头看，每一个小时都算数。',
+    `你现在 ${age} 岁，还在这本书的 ${pad(nowBeat.hour)}:00。后面的页，都还空着。`,
     `我想告诉你，「${code.patch.stat}」是我们起点最低的一项，可它也是这一生长得最多的地方。别急，慢慢来。`,
+    reader.lines.carer ? `你在年夜饭那一页写给${ctx.carer}的那句"${reader.lines.carer}"，有机会的话，在现实里也说给${CARER_TA_TEXT[ctx.carer]}听吧。` : `有空的话，给${ctx.carer}打个电话。`,
     flags.has('close') ? `还有，记得给${ctx.friend}打个电话。` : '还有，如果心里惦记着谁，就去联系 TA 吧。',
-    dawn.option.key === 'a' ? '最后，我在本子上写下的那句话，现在也送给你：慢慢来，别怕。' : `最后，天亮的时候，我选了「${dawn.option.text}」。希望你也能有一个这样的早晨。`,
+    reader.lines.dawn ? `最后，你在本子最后一页写下的那句话，我替你记着：${reader.lines.dawn}` : dawn.option.key === 'a' ? '最后，我在本子上写下的那句话，现在也送给你：慢慢来，别怕。' : `最后，天亮的时候，我选了「${dawn.option.text}」。希望你也能有一个这样的早晨。`,
   ];
 
   return {
-    title: `${code.kernel} · ${archetype.name}的一天`,
-    summary: `${code.kernelImage}一样的本性，走出了一条「${report.mainPole}」的路。24 个选择里，你改写了 ${report.rewriteCount} 处出生设定。`,
+    title: `${reader.name ? reader.name + '的' : ''}人生说明书`,
+    now: { age, clock: `${pad(nowBeat.hour)}:00`, stage: STAGES[nowBeat.stage].timeOfDay, chose: nowStep?.option.text ?? null, text: nowText, concern },
+    rewrites,
+    lines,
+    summary: `${code.kernel}，${code.kernelImage}一样的本性，在这本书里走成了「${archetype.name}」。六行出生设定，你改写了 ${report.rewriteCount} 行。`,
     novel,
     epilogue,
     pillars,
@@ -519,6 +654,9 @@ export const DEEP_TEXTS: readonly string[] = [
   ...Object.values(PATTERN_BALANCED),
   ...Object.values(PRACTICE).flatMap(p => [p.title, ...p.steps]),
   ...Object.values(ELEMENT_PRACTICE).flatMap(p => [p.title, ...p.steps]),
+  ...STAGE_NOW,
+  ...Object.values(CONCERN).flatMap(c => [c.title, c.open, ...Object.values(c.tips)]),
+  ...(['顺写', '改写', '自由'] as const).flatMap(v => [VERDICT_TEXT[v]('稳妥', '冒险'), VERDICT_TEXT[v]('中立', '平衡')]),
 ];
 
 /** 测试用:找出缺少旁白的选项 */

@@ -1,9 +1,10 @@
-// 本机存档:只存出生参数和每一步所选选项的编号,刷新或退出后可以继续。
-// 存在浏览器的 localStorage 里,不上传;读写失败(隐私模式等)时静默忽略。
+// 本机存档:只存出生参数、扉页信息和每一步所选选项的编号,刷新或退出后可以继续。
+// 存在浏览器的 localStorage 里;读写失败(隐私模式等)时静默忽略。
 import type { BirthInput } from './engine/chart.ts';
 import { parseBirthInput, parsePicks, parsePlace } from './engine/validate.ts';
+import { parseReader, type Reader } from './engine/reader.ts';
 
-const KEY = 'life-code.save.v3';
+const KEY = 'life-code.save.v4';
 
 export interface Save {
   input: BirthInput;
@@ -11,6 +12,7 @@ export interface Save {
   place: string | null;
   /** 每一步所选选项的编号(a、b、c…) */
   picks: string[];
+  reader: Reader;
 }
 
 export function writeSave(save: Save) {
@@ -29,7 +31,8 @@ export function loadSave(): Save | null {
     const input = parseBirthInput(s?.input);
     const place = parsePlace(s?.place);
     const picks = parsePicks(s?.picks);
-    return input && place !== undefined && picks ? { input, place, picks } : null;
+    const reader = parseReader(s?.reader);
+    return input && place !== undefined && picks && reader ? { input, place, picks, reader } : null;
   } catch {
     return null;
   }

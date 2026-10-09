@@ -75,7 +75,13 @@ test('接口:兑换深度解析、静态文件、限流', async () => {
     assert.equal((await post({ code, device: 'device-aaaa', input, place: '成都', picks: picks.slice(0, 10) })).status, 400);
     assert.equal((await post({ code, device: 'x', input, place: null, picks })).status, 400);
     assert.equal((await post({ code, device: 'device-aaaa', input: { ...input, gender: 'x' }, place: null, picks })).status, 400);
-    assert.equal(store.info(code)?.uses, 1, '无效请求不消耗兑换码');
+    assert.equal((await post({ code, device: 'device-aaaa', input, place: '成都', picks, reader: { carer: '邻居' } })).status, 400);
+    const withReader = await post({ code, device: 'device-aaaa', input, place: '成都', picks: fullPicks('成都'), reader: { name: '阿禾', carer: '外婆', concern: 'work', lines: { dawn: '慢慢来' } } });
+    const rd = await withReader.json();
+    assert.equal(rd.ok, true);
+    assert.ok(rd.deep.title.startsWith('阿禾'));
+    assert.equal(rd.deep.now.concern.title, '工作和以后的方向');
+    assert.equal(store.info(code)?.uses, 2, '无效请求不消耗兑换码');
 
     for (let i = 0; i < 3; i++) assert.equal((await post({ code: 'AAAA-BBBB-CCCC', device: 'device-bbbb', input, place: null, picks })).status, 403);
     const blocked = await post({ code, device: 'device-bbbb', input, place: null, picks });

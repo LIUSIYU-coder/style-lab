@@ -1,6 +1,7 @@
 // 兑换深度解析:设备编号、本机记住的兑换码、请求服务器。
 import type { BirthInput } from './engine/chart.ts';
 import type { DeepReport } from './engine/deep.ts';
+import type { Reader } from './engine/reader.ts';
 import { UNLOCK_API } from './config.ts';
 
 const DEVICE_KEY = 'life-code.device';
@@ -38,13 +39,13 @@ export const forgetCode = () => set(CODE_KEY, null);
 
 export type UnlockResult = { ok: true; deep: DeepReport; devicesLeft: number } | { ok: false; error: string; forget?: boolean };
 
-export async function unlock(code: string, input: BirthInput, place: string | null, picks: string[]): Promise<UnlockResult> {
+export async function unlock(code: string, input: BirthInput, place: string | null, picks: string[], reader: Reader): Promise<UnlockResult> {
   let res: Response;
   try {
     res = await fetch(UNLOCK_API, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code, device: deviceId(), input, place, picks }),
+      body: JSON.stringify({ code, device: deviceId(), input, place, picks, reader }),
     });
   } catch {
     return { ok: false, error: '连不上兑换服务器，请检查网络后再试。如果你是在预览页面里，请到购买后收到的正式网址打开。' };

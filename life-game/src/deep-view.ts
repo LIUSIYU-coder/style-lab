@@ -23,7 +23,7 @@ function saveChecks(id: string, checks: Set<string>) {
 /** 小说全文,用于"复制全文" */
 export function novelText(d: DeepReport): string {
   return [
-    `《${d.title}》`,
+    '《你的这一天》',
     ...d.novel.flatMap(c => ['', `${c.title}（${c.subtitle}）`, ...c.paragraphs]),
     '',
     '尾声',
@@ -33,18 +33,34 @@ export function novelText(d: DeepReport): string {
 
 export function deepHtml(d: DeepReport): string {
   const toc = [
-    ['novel', '你的这一天'],
-    ['pillars', '四柱逐柱'],
-    ['dayun', '人生章节'],
-    ['notes', '24 个选择'],
+    ['now', '现在这一页'],
+    ['rewrites', '六行深读'],
     ['patterns', '你是怎样的人'],
-    ['weeks', '四周小实验'],
+    ['pillars', '四柱'],
+    ['dayun', '大运'],
+    ['notes', '24 个选择'],
+    ['weeks', '小实验'],
     ['letter', '一封信'],
+    ['novel', '附赠小说'],
   ];
+  const now = `
+    <div class="now-box"><span class="hint" style="color:inherit">你今年 ${d.now.age} 岁，正走到</span><b>${esc(d.now.clock)} · ${esc(d.now.stage)}</b></div>
+    ${d.now.text.map(t => `<p>${esc(t)}</p>`).join('')}
+    ${d.now.concern ? `<div class="combo"><span class="hint">你最近在意的：${esc(d.now.concern.title)}</span>${d.now.concern.text.map(t => `<p>${esc(t)}</p>`).join('')}</div>` : ''}`;
+  const rewrites = d.rewrites
+    .map(r => `
+      <div class="rw">
+        <div class="rw-head"><b>${esc(r.title)}</b><span class="verdict v-${r.verdict}">${r.verdict}</span></div>
+        ${r.text.map(t => `<p>${esc(t)}</p>`).join('')}
+      </div>`)
+    .join('');
+  const lines = d.lines.length
+    ? `<div class="combo"><span class="hint">你亲手写下的话</span>${d.lines.map(l => `<p class="hint">${esc(l.label)}</p><p class="written still">${esc(l.text)}</p>`).join('')}</div>`
+    : '';
   const novel = d.novel
     .map(
       c => `
-      <section class="chapter">
+      <section class="chapter-d">
         <h3>${esc(c.title)}</h3>
         <p class="chapter-sub">${esc(c.subtitle)}</p>
         ${c.paragraphs.map((p, i) => `<p class="${i === 0 ? 'lead' : i === c.paragraphs.length - 1 ? 'coda' : ''}">${esc(p)}</p>`).join('')}
@@ -107,43 +123,44 @@ export function deepHtml(d: DeepReport): string {
     .join('');
 
   return `
-    <p class="eyebrow">完整深度解析</p>
+    <p class="eyebrow">书末附录 · 已解锁</p>
     <h2 class="h2" id="deep-title" tabindex="-1">${esc(d.title)}</h2>
     <p class="lede">${esc(d.summary)}</p>
     <nav class="toc" aria-label="目录">${toc.map(([id, name]) => `<a href="#d-${id}">${name}</a>`).join('')}</nav>
 
-    <section class="panel deep-block" id="d-novel">
-      <div class="panel-title"><span>《你的这一天》</span><b>五章小说</b></div>
-      <div class="novel">${novel}
-        <section class="chapter epilogue"><h3>尾声</h3>${d.epilogue.map(p => `<p>${esc(p)}</p>`).join('')}</section>
-      </div>
-      <button class="btn" type="button" id="btn-copy-novel">复制小说全文</button>
-      <p class="hint" id="copy-note" aria-live="polite"></p>
+    <section class="panel" id="d-now">
+      <div class="panel-title"><span>你现在所在的这一页</span><b>第一节</b></div>
+      ${now}
     </section>
 
-    <section class="panel deep-block" id="d-pillars">
-      <div class="panel-title"><span>四柱逐柱解读</span><b>年 · 月 · 日 · 时</b></div>
-      ${pillars}
+    <section class="panel" id="d-rewrites">
+      <div class="panel-title"><span>六行底层代码</span><b>逐行深读</b></div>
+      ${rewrites}
     </section>
 
-    <section class="panel deep-block" id="d-dayun">
-      <div class="panel-title"><span>大运 · 人生章节</span><b>每十年一个主题</b></div>
-      <ol class="yun-chapters">${dayun}</ol>
-      <p class="hint">大运在这里是游戏的"章节背景"，用来对照你在那个年纪做的选择，不是对现实的判断。</p>
-    </section>
-
-    <section class="panel deep-block" id="d-notes">
-      <div class="panel-title"><span>24 个选择逐条批注</span><b>点开看没走的路</b></div>
-      <div class="notes">${notes}</div>
-    </section>
-
-    <section class="panel deep-block" id="d-patterns">
+    <section class="panel" id="d-patterns">
       <div class="panel-title"><span>你是怎样的人</span><b>三种处境</b></div>
       ${patterns}
       <div class="combo"><span class="hint">主轴 + 副轴</span><h4>${esc(d.combo.name)}</h4><p>${esc(d.combo.text)}</p></div>
     </section>
 
-    <section class="panel deep-block" id="d-weeks">
+    <section class="panel" id="d-pillars">
+      <div class="panel-title"><span>四柱逐柱</span><b>年 · 月 · 日 · 时</b></div>
+      ${pillars}
+    </section>
+
+    <section class="panel" id="d-dayun">
+      <div class="panel-title"><span>大运 · 人生章节</span><b>每十年一个主题</b></div>
+      <ol class="yun-chapters">${dayun}</ol>
+      <p class="hint">大运在这里是游戏的"章节背景"，用来对照你在那个年纪做的选择，不是对现实的判断。</p>
+    </section>
+
+    <section class="panel" id="d-notes">
+      <div class="panel-title"><span>24 个选择</span><b>点开看没走的路</b></div>
+      <div class="notes">${notes}</div>
+    </section>
+
+    <section class="panel" id="d-weeks">
       <div class="panel-title"><span>四周小实验</span><b>做完打个勾</b></div>
       ${weeks}
     </section>
@@ -152,12 +169,22 @@ export function deepHtml(d: DeepReport): string {
       ${d.letter.map((p, i) => `<p class="${i === 0 ? 'salute' : ''}">${esc(p)}</p>`).join('')}
       <p class="sign">—— 破晓时分的你</p>
     </section>
+    ${lines}
 
-    <div class="btn-row">
-      <button class="btn" type="button" id="btn-deep-back">回到纪念卡</button>
-      <button class="btn" type="button" id="btn-deep-replay">换一种选法</button>
+    <section class="panel" id="d-novel">
+      <div class="panel-title"><span>附赠 · 《你的这一天》</span><b>五章小说</b></div>
+      <div class="novel">${novel}
+        <section class="chapter-d epilogue"><h3>尾声</h3>${d.epilogue.map(p => `<p>${esc(p)}</p>`).join('')}</section>
+      </div>
+      <button class="btn" type="button" id="btn-copy-novel">复制小说全文</button>
+      <p class="copy-note" id="copy-note" aria-live="polite"></p>
+    </section>
+
+    <div class="row center">
+      <button class="btn" type="button" id="btn-deep-back">回到书末附录</button>
+      <button class="btn" type="button" id="btn-deep-replay">重读一遍，换一种选法</button>
     </div>
-    <p class="fine">深度解析由你的出生设定和 24 个选择生成，是虚构的娱乐内容，不构成任何预测或建议。</p>
+    <p class="fine">人生说明书由你的出生设定、扉页信息和 24 个选择生成，是虚构的娱乐内容，不构成任何预测或建议。</p>
   `;
 }
 
