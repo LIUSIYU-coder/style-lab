@@ -5,11 +5,17 @@ import { PROVINCES } from './engine/regions.ts';
 import { buildLifeCode, codeLines, type LifeCode } from './engine/profile.ts';
 import { agesLabel, AXES, AXIS_POLES, clockLabel, environmentFor, replayStory, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, type Effects, type ResolvedBeat, type StoryContext } from './engine/story.ts';
 import { sceneSvg } from './scene.ts';
+import { esc } from './html.ts';
+import { SCENE_IMAGES, SHOP } from './config.ts';
+import { forgetCode, savedCode, unlock } from './unlock.ts';
+import { bindDeep, deepHtml } from './deep-view.ts';
+import { shareImage } from './share-image.ts';
+import type { DeepReport } from './engine/deep.ts';
 import { clearSave, loadSave, writeSave } from './save.ts';
 import { MAX_YEAR, MIN_YEAR } from './engine/validate.ts';
 import { buildReport, choiceOf, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
 
-type ScreenId = 'intro' | 'form' | 'decode' | 'code' | 'stage' | 'result';
+type ScreenId = 'intro' | 'form' | 'decode' | 'code' | 'stage' | 'result' | 'deep';
 
 interface Game {
   input: BirthInput;
@@ -40,9 +46,6 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string) => {
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function esc(s: string | number): string {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-}
 
 /* ---------------- 页面切换 ---------------- */
 
@@ -271,6 +274,8 @@ function renderCode() {
   $('#screen-code').innerHTML = `
     <p class="eyebrow">第三步 · 命盘编号 ${esc(code.seedHex)}</p>
     <h2 class="h2" id="code-title" tabindex="-1">你的底层代码</h2>
+    <button class="btn primary" type="button" id="btn-play-top">开始这一天 · 清晨 6 点出生</button>
+    <p class="hint center">下面是你的命盘，可以先看，也可以过完这一天再回来看。</p>
 
     <div class="panel reveal">
       <div class="panel-title"><span>四柱八字</span><b>${esc(chart.lunarText)} · 生肖${esc(chart.zodiac)}</b></div>
@@ -312,7 +317,7 @@ function renderCode() {
     <p class="fine">以上设定只用来生成这局游戏里的角色。接下来的 24 个小时，由你决定怎么过。</p>
     <button class="btn primary" type="button" id="btn-play">清晨 6 点，出生</button>
   `;
-  $('#btn-play').onclick = () => show('stage', renderSlot);
+  $('#btn-play').onclick = $('#btn-play-top').onclick = () => show('stage', renderSlot);
 }
 
 /* ---------------- 人生 24 小时 ---------------- */
@@ -374,7 +379,7 @@ function renderSlot() {
         <span class="cal-num">${clock}</span>
         <span class="cal-sub">${shichen(beat.hour)} · ${esc(agesLabel(beat))}</span>
       </div>
-      <figure class="photo">${sceneSvg(beat.hour, r.scene, `${clock}，${agesLabel(beat)}`)}</figure>
+      <figure class="photo">${sceneSvg(beat.hour, r.scene, `${clock}，${agesLabel(beat)}`)}<img class="scene-photo" alt="" hidden></figure>
     </div>
     <div class="stage-name"><h2 id="stage-title" tabindex="-1">人生第 ${g.choices.length + 1} 小时</h2><span>${esc(stage.name)}，${esc(agesLabel(beat))}</span></div>
     <div class="env"><span class="tag">大运</span><b class="${env.element ? `el-${env.element}` : ''}">${esc(env.ganZhi)}</b><span>${esc(env.relation)}</span></div>
@@ -386,6 +391,23 @@ function renderSlot() {
     </div>
   `;
   screen.querySelectorAll<HTMLButtonElement>('.option').forEach(btn => btn.addEventListener('click', () => choose(Number(btn.dataset.i))));
+  loadScenePhoto(screen, beat.id);
+}
+
+/** 如果 public/scenes/ 里放了这一幕的插画，就盖在矢量画面上；没有就保持矢量画面 */
+function loadScenePhoto(screen: HTMLElement, id: string) {
+  const img = screen.querySelector<HTMLImageElement>('.scene-photo');
+  if (!img) return;
+  if (!SCENE_IMAGES) {
+    img.remove();
+    return;
+  }
+  img.onload = () => {
+    img.hidden = false;
+    img.previousElementSibling?.setAttribute('hidden', '');
+  };
+  img.onerror = () => img.remove();
+  img.src = `scenes/${id}.jpg`;
 }
 
 function choose(i: number) {
@@ -450,6 +472,133 @@ function section(title: string, body: string, note = ''): string {
   return `<section class="panel report-block"><div class="panel-title"><span>${esc(title)}</span>${note ? `<b>${note}</b>` : ''}</div>${body}</section>`;
 }
 
+/* ---------------- 深度解析:解锁与阅读 ---------------- */
+
+let deepCache: { key: string; deep: DeepReport } | null = null;
+const gameKey = (g: Game) => JSON.stringify([g.input, g.place, g.picks]);
+
+function unlockPanel(g: Game): string {
+  const first = resolveBeat(0, g.ctx, new Set());
+  const teaser = first.text.replace(/你——$/, '你') + g.choices[0].optionText.replace(/^你/, '') + '……';
+  const blur = g.choices.slice(1, 5).map(c => c.optionText).join('。') + '。';
+  const saved = savedCode();
+  const action = saved
+    ? `<button class="btn primary" type="button" id="btn-open-deep">打开我的深度解析</button>
+       <button class="btn ghost" type="button" id="btn-new-code">换一个兑换码</button>`
+    : `<form class="unlock-form" id="unlock-form" novalidate>
+         <label for="code-input">输入兑换码</label>
+         <div class="code-row">
+           <input id="code-input" name="code" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="24" aria-describedby="unlock-hint">
+           <button class="btn primary" type="submit">解锁</button>
+         </div>
+       </form>`;
+  return `
+    <section class="panel unlock report-block" id="unlock">
+      <div class="panel-title"><span>完整深度解析</span><b>${esc(SHOP.price)} · 买一次一直能看</b></div>
+      <div class="teaser">
+        <p class="teaser-head">《你的这一天》· 第一章　清晨</p>
+        <p>${esc(teaser)}</p>
+        <p class="blur" aria-hidden="true">${esc(blur)}</p>
+      </div>
+      <ul class="unlock-list">${LOCKED_ITEMS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+      ${action}
+      <p class="form-error" id="unlock-error" role="alert" hidden></p>
+      <p class="hint" id="unlock-hint">一个兑换码最多在 3 台设备上使用。换选法、换出生时间重玩，都能生成新的解析。</p>
+      <p class="hint">还没有兑换码？${esc(SHOP.where)}。</p>
+    </section>`;
+}
+
+function bindUnlock(g: Game) {
+  const error = $('#unlock-error');
+  const run = async (code: string, button: HTMLButtonElement) => {
+    error.hidden = true;
+    const key = gameKey(g);
+    if (deepCache?.key === key) return openDeep(g, deepCache.deep);
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = '正在生成…';
+    const res = await unlock(code, g.input, g.place, g.picks);
+    button.disabled = false;
+    button.textContent = label;
+    if (res.ok) {
+      deepCache = { key, deep: res.deep };
+      openDeep(g, res.deep);
+      return;
+    }
+    if (res.forget) forgetCode();
+    error.textContent = res.error;
+    error.hidden = false;
+  };
+  const form = document.querySelector<HTMLFormElement>('#unlock-form');
+  if (form) {
+    const input = $<HTMLInputElement>('#code-input');
+    form.onsubmit = e => {
+      e.preventDefault();
+      const code = input.value.trim();
+      if (code.replace(/[^0-9a-z]/gi, '').length < 12) {
+        error.textContent = '兑换码是 12 位字母和数字，请检查一下。';
+        error.hidden = false;
+        input.focus();
+        return;
+      }
+      void run(code, form.querySelector('button')!);
+    };
+  }
+  const open = document.querySelector<HTMLButtonElement>('#btn-open-deep');
+  if (open) open.onclick = () => void run(savedCode() ?? '', open);
+  const again = document.querySelector<HTMLButtonElement>('#btn-new-code');
+  if (again)
+    again.onclick = () => {
+      forgetCode();
+      $('#unlock').outerHTML = unlockPanel(g);
+      bindUnlock(g);
+      $<HTMLInputElement>('#code-input').focus();
+    };
+}
+
+function openDeep(g: Game, deep: DeepReport) {
+  show('deep', () => {
+    const screen = $('#screen-deep');
+    screen.innerHTML = deepHtml(deep);
+    bindDeep(screen, deep);
+    $('#btn-deep-back').onclick = () => show('result', renderResult);
+    $('#btn-deep-replay').onclick = () => {
+      game = newGame(g.input, g.place);
+      writeSave({ input: g.input, place: g.place, picks: [] });
+      show('stage', renderSlot);
+    };
+  });
+}
+
+/* ---------------- 分享图 ---------------- */
+
+async function openShare(g: Game, r: Report) {
+  const sheet = $('#share-sheet');
+  const img = $<HTMLImageElement>('#share-img');
+  const btn = $<HTMLButtonElement>('#btn-share');
+  btn.disabled = true;
+  try {
+    img.src = await shareImage({
+      title: r.title,
+      motto: r.archetype.motto,
+      tags: r.traits.map(t => t.pole),
+      gan: g.chart.dayMaster.gan,
+      image: g.code.kernelImage,
+      line: `日主 ${g.code.kernel} · 主轴「${r.mainPole}」· 改写了 ${r.rewriteCount} 行底层代码`,
+      axes: r.axes.map(a => ({ axis: a.axis, score: a.score, pct: a.pct })),
+      moment: r.moments[0] ? `${r.moments[0].clock}（${r.moments[0].agesLabel}），我选择了「${r.moments[0].optionText}」` : null,
+      closing: `和${g.ctx.friend}、外婆、巷口的早餐摊一起，过完了这一天。`,
+      home: g.ctx.home,
+      seed: g.code.seedHex.slice(2),
+      site: SHOP.site,
+    });
+    sheet.hidden = false;
+    $('#btn-sheet-close').focus();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function renderResult() {
   if (!game) return;
   const g = game;
@@ -487,7 +636,7 @@ function renderResult() {
       <div class="axes">${axes}</div>
       <div class="card-foot"><p><b>人生底层代码</b><span>和${esc(g.ctx.friend)}、外婆、巷口的早餐摊一起，过完了这一天。</span></p><div class="postmark" aria-hidden="true">${esc(g.ctx.home)}<br>06:00—05:00<br>${esc(g.code.seedHex.slice(2))}</div></div>
     </div>
-    <p class="shot-hint">截图这张纪念卡，就可以分享给朋友</p>
+    <button class="btn" type="button" id="btn-share">生成纪念卡图片，发给朋友</button>
 
     ${section('你的选择风格', `<p class="insight">${esc(r.archetype.desc)}</p><div class="traits">${r.traits.map(t => `<div class="trait"><b>${esc(t.pole)}</b><p>${esc(t.evidence)}</p></div>`).join('')}</div>`)}
 
@@ -511,12 +660,7 @@ function renderResult() {
 
     ${section('这周的小实验', `<p class="insight">${esc(r.archetype.suggestion)}</p><p class="hint">留给自己的问题：${esc(r.archetype.question)}</p>`)}
 
-    <section class="panel locked report-block">
-      <div class="panel-title"><span>完整深度报告</span><b>内测中</b></div>
-      <ul>${LOCKED_ITEMS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-      <button class="btn" type="button" id="btn-full">我想看完整报告</button>
-      <p class="note" id="full-note" hidden>完整报告还在制作中。上线后会出现在这里。</p>
-    </section>
+    ${unlockPanel(g)}
 
     <details class="panel method">
       <summary>这份报告是怎么算的</summary>
@@ -527,11 +671,10 @@ function renderResult() {
       <button class="btn" type="button" id="btn-replay">换一种选法</button>
       <button class="btn" type="button" id="btn-restart">换个出生时间</button>
     </div>
-    <p class="fine">本游戏用传统历法生成角色设定，所有剧情与分析都是虚构的娱乐内容，不构成任何预测或建议。出生信息只在你的浏览器里计算，不会上传。</p>
+    <p class="fine">本游戏用传统历法生成角色设定，所有剧情与分析都是虚构的娱乐内容，不构成任何预测或建议。出生信息只在你的浏览器里计算。</p>
   `;
-  $('#btn-full').onclick = () => {
-    $('#full-note').hidden = false;
-  };
+  bindUnlock(g);
+  $('#btn-share').onclick = () => openShare(g, r);
   const replay = () => {
     game = newGame(g.input, g.place);
     writeSave({ input: g.input, place: g.place, picks: [] });
@@ -565,6 +708,18 @@ function boot() {
     };
   }
   $('#btn-show-code').onclick = () => show('code', renderCode);
+  const sheet = $('#share-sheet');
+  const closeSheet = () => {
+    sheet.hidden = true;
+    document.querySelector<HTMLElement>('#btn-share')?.focus();
+  };
+  $('#btn-sheet-close').onclick = closeSheet;
+  sheet.onclick = e => {
+    if (e.target === sheet) closeSheet();
+  };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !sheet.hidden) closeSheet();
+  });
   document.querySelectorAll<HTMLElement>('[data-go]').forEach(b => (b.onclick = () => show(b.dataset.go as ScreenId)));
 }
 

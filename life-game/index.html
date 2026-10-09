@@ -28,8 +28,8 @@
     <div class="tagline"><span class="chip magenta">四柱排盘</span><span class="chip cyan">一天过完一生</span><span class="chip gold">人生纪念卡</span></div>
     <button class="btn primary" type="button" id="btn-start">开始这一天</button>
     <button class="btn" type="button" id="btn-resume" hidden></button>
-    <p class="meta">约 6 分钟 · 自动存档 · 过完这一天，会得到一张人生纪念卡</p>
-    <p class="fine">出生信息只在你的浏览器里计算，不会上传。<br>剧情与分析均为虚构的娱乐内容。</p>
+    <p class="meta">约 8 分钟 · 自动存档 · 过完这一天，会得到一张人生纪念卡</p>
+    <p class="fine">排盘和剧情都在你的浏览器里完成。只有兑换深度解析时，出生参数和选择才会发给服务器生成报告，用完不保存。<br>剧情与分析均为虚构的娱乐内容。</p>
   </section>
 
   <section class="screen" id="screen-form" aria-labelledby="form-title" hidden>
@@ -104,6 +104,14 @@
   <section class="screen" id="screen-code" aria-labelledby="code-title" hidden></section>
   <section class="screen" id="screen-stage" aria-labelledby="stage-title" hidden></section>
   <section class="screen" id="screen-result" aria-labelledby="result-title" hidden></section>
+  <section class="screen" id="screen-deep" aria-labelledby="deep-title" hidden></section>
+  <div class="sheet" id="share-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+    <div class="sheet-card">
+      <p class="sheet-title" id="sheet-title">长按图片，保存到相册</p>
+      <img id="share-img" alt="人生纪念卡图片">
+      <button class="btn" type="button" id="btn-sheet-close">关闭</button>
+    </div>
+  </div>
 </main>
 <script type="module" src="/src/main.ts"></script>
 </body>

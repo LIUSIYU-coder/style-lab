@@ -109,6 +109,8 @@ p { margin: 0; text-wrap: pretty; }
 .btn.primary { background: var(--red); border-color: #7d2618; color: var(--cream); box-shadow: 0 3px 0 #7d2618; }
 .btn.primary:hover { background: color-mix(in oklab, var(--red) 90%, #000); }
 .btn.primary:active { box-shadow: 0 1px 0 #7d2618; }
+.btn:disabled { opacity: 0.6; cursor: progress; }
+.center { text-align: center; }
 .btn.ghost { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); font-family: var(--font-body); font-weight: 400; font-size: var(--step-0); letter-spacing: 0.06em; }
 .btn.ghost:hover { color: var(--ink); background: transparent; }
 .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
@@ -143,7 +145,7 @@ p { margin: 0; text-wrap: pretty; }
 .form { display: flex; flex-direction: column; gap: 1.5rem; }
 .field { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; border: 0; min-width: 0; }
 .field > label, legend { font-family: var(--font-display); font-weight: 700; font-size: var(--step-0); padding: 0; }
-input[type="date"], input[type="time"], select {
+input[type="date"], input[type="time"], input[type="text"], select {
   width: 100%;
   min-height: 52px;
   padding: 0.75rem 0.875rem;
@@ -510,7 +512,6 @@ input:disabled, select:disabled { opacity: 0.45; }
 .card-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 0.7rem; }
 .card-foot p { display: flex; flex-direction: column; gap: 0.2rem; }
 .card-foot b { font-family: var(--font-display); color: var(--ink); font-size: var(--step-0); }
-.shot-hint { text-align: center; color: var(--muted); font-size: var(--step--1); }
 
 /* ---------- 报告模块 ---------- */
 .traits { display: flex; flex-direction: column; gap: 0.9rem; }
@@ -561,10 +562,99 @@ input:disabled, select:disabled { opacity: 0.45; }
 .dots li { list-style: none; position: relative; padding-left: 1rem; font-size: var(--step--1); line-height: 1.7; }
 .dots li::before { content: ""; position: absolute; left: 0; top: 0.7em; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 
-.locked ul { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
-.locked li { list-style: none; display: flex; gap: 0.6rem; align-items: baseline; color: var(--muted); font-size: var(--step--1); }
-.locked li::before { content: "未拆封"; flex: none; font-size: 0.625rem; padding: 0 0.3rem; color: var(--red); border: 1px solid var(--red); border-radius: 3px; }
-.locked .note { color: var(--green); font-size: var(--step--1); }
+/* ---------- 深度解析:解锁区 ---------- */
+.unlock { border-color: color-mix(in oklab, var(--red) 40%, var(--line)); background: linear-gradient(180deg, #fffaf1, var(--paper)); }
+.teaser { position: relative; padding: 0.9rem 1rem; border-radius: 10px; background: #fffdf8; border: 1px dashed var(--line); font-family: var(--font-display); line-height: 1.9; }
+.teaser-head { font-size: var(--step--1); color: var(--red); letter-spacing: 0.1em; margin-bottom: 0.35rem; }
+.teaser .blur { filter: blur(4px); user-select: none; color: var(--muted); max-height: 5.7em; overflow: hidden; mask-image: linear-gradient(180deg, #000 30%, transparent); }
+.unlock-list { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.unlock-list li { list-style: none; display: flex; gap: 0.6rem; align-items: baseline; font-size: var(--step--1); line-height: 1.6; }
+.unlock-list li::before { content: "未拆封"; flex: none; font-size: 0.625rem; padding: 0 0.3rem; color: var(--red); border: 1px solid var(--red); border-radius: 3px; }
+.unlock-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.unlock-form label { font-family: var(--font-display); font-weight: 700; }
+.code-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+.code-row input { text-transform: uppercase; letter-spacing: 0.12em; font-family: ui-monospace, "SF Mono", Menlo, monospace; min-width: 0; }
+.code-row input::placeholder { letter-spacing: 0.08em; color: color-mix(in oklab, var(--muted) 60%, transparent); }
+.code-row .btn { min-height: 52px; padding-inline: 1.1rem; }
+
+/* ---------- 分享图弹层 ---------- */
+.sheet { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); background: rgb(46 40 34 / 0.72); }
+.sheet-card { display: flex; flex-direction: column; gap: 0.75rem; width: min(26rem, 100%); max-height: 100%; }
+.sheet-title { color: var(--cream); text-align: center; font-size: var(--step-0); letter-spacing: 0.1em; }
+.sheet img { display: block; width: 100%; height: auto; max-height: calc(100dvh - 9rem); object-fit: contain; border-radius: 8px; -webkit-touch-callout: default; }
+
+/* ---------- 场景插画(可选) ---------- */
+.scene-photo { display: block; width: 100%; height: auto; aspect-ratio: 360 / 220; object-fit: cover; border-radius: 2px; }
+
+/* ---------- 深度解析阅读页 ---------- */
+.toc { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.toc a { padding: 0.2rem 0.65rem; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: var(--step--1); text-decoration: none; }
+.toc a:hover { border-color: var(--red); color: var(--red); }
+.deep-block { scroll-margin-top: 1rem; }
+.novel { display: flex; flex-direction: column; gap: 0.5rem; }
+.chapter { display: flex; flex-direction: column; gap: 0.9rem; }
+.chapter h3 { font-size: var(--step-2); letter-spacing: 0.12em; }
+.chapter-sub { color: var(--muted); font-size: var(--step--1); margin-top: -0.6rem; }
+.chapter p:not(.chapter-sub) { font-family: var(--font-display); font-size: 1.0625rem; line-height: 2; text-indent: 2em; }
+.chapter .lead { color: var(--green); text-indent: 0 !important; }
+.chapter .coda { color: var(--red); text-indent: 0 !important; }
+.epilogue { margin-top: 0.75rem; padding-top: 1rem; border-top: 1px dashed var(--line); }
+.fleuron { text-align: center; color: var(--red); letter-spacing: 0.6em; padding-block: 0.4rem; }
+.pillar-card { display: flex; flex-direction: column; gap: 0.5rem; padding-block: 0.9rem; border-top: 1px dashed var(--line); }
+.pillar-card:first-of-type { border-top: 0; padding-top: 0.2rem; }
+.pillar-card header { display: flex; gap: 0.8rem; align-items: center; }
+.pillar-card .gz { flex: none; display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 8px; background: var(--red); color: var(--cream); font-family: var(--font-display); font-size: var(--step-1); font-weight: 700; letter-spacing: 0.05em; }
+.pillar-card header b { display: block; font-family: var(--font-display); font-size: var(--step-1); }
+.pillar-card header small { color: var(--muted); font-size: var(--step--1); }
+.pillar-card p { font-size: var(--step-0); line-height: 1.8; }
+.yun-chapters { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.yun-chapters li { list-style: none; display: grid; grid-template-columns: 3rem 1fr; gap: 0.75rem; }
+.yun-gz { font-family: var(--font-display); font-weight: 700; font-size: var(--step-1); color: var(--green); writing-mode: vertical-rl; letter-spacing: 0.15em; justify-self: center; }
+.yun-chapters b { font-family: var(--font-display); }
+.yun-chapters p { font-size: var(--step--1); line-height: 1.7; color: var(--muted); }
+.yun-chapters .in-game { color: var(--ink); margin-top: 0.2rem; }
+.notes { display: flex; flex-direction: column; }
+.note-item { border-top: 1px dashed var(--line); }
+.note-item:first-child { border-top: 0; }
+.note-item summary { display: grid; grid-template-columns: 4.2rem 1fr auto; gap: 0.6rem; align-items: baseline; padding-block: 0.7rem; cursor: pointer; list-style: none; }
+.note-item summary::-webkit-details-marker { display: none; }
+.note-item summary::after { content: "＋"; color: var(--red); }
+.note-item[open] summary::after { content: "－"; }
+.note-item .when { color: var(--red); font-weight: 700; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; line-height: 1.2; }
+.note-item .when small { font-size: 0.6875rem; color: var(--muted); font-weight: 400; }
+.note-item .what { font-family: var(--font-display); line-height: 1.6; }
+.note-body { display: flex; flex-direction: column; gap: 0.5rem; padding: 0 0 0.9rem 4.8rem; font-size: var(--step--1); line-height: 1.7; }
+.others { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.others li { list-style: none; padding: 0.5rem 0.7rem; border-radius: 8px; background: var(--paper-2); }
+.others b { display: block; font-weight: 600; }
+.others span { color: var(--muted); }
+.pattern { display: flex; flex-direction: column; gap: 0.35rem; }
+.pattern h4, .combo h4 { margin: 0; font-family: var(--font-display); font-size: var(--step-1); }
+.pattern p:not(.hint), .combo p { line-height: 1.85; }
+.combo { padding: 0.9rem 1rem; border-radius: 10px; background: var(--amber-soft); display: flex; flex-direction: column; gap: 0.35rem; }
+.week { display: flex; flex-direction: column; gap: 0.45rem; padding-block: 0.8rem; border-top: 1px dashed var(--line); }
+.week:first-of-type { border-top: 0; padding-top: 0.2rem; }
+.week-head { display: flex; gap: 0.6rem; align-items: baseline; }
+.week-no { flex: none; font-size: 0.6875rem; color: var(--cream); background: var(--green); padding: 0.05rem 0.45rem; border-radius: 4px; }
+.week-head b { font-family: var(--font-display); font-size: var(--step-1); }
+.step { display: flex; gap: 0.6rem; align-items: flex-start; font-size: var(--step--1); line-height: 1.7; cursor: pointer; }
+.step input { flex: none; width: 1.15rem; height: 1.15rem; margin: 0.2rem 0 0; accent-color: var(--green); }
+.step:has(input:checked) span { color: var(--muted); text-decoration: line-through; }
+.letter {
+  display: flex; flex-direction: column; gap: 0.8rem;
+  padding: 1.4rem 1.3rem;
+  border-radius: 4px;
+  background: repeating-linear-gradient(180deg, #fffdf6 0 2.05rem, #eadcc4 2.05rem calc(2.05rem + 1px));
+  box-shadow: 0 1px 2px var(--shadow), 0 18px 30px -18px var(--shadow);
+  rotate: -0.4deg;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  line-height: 2.05rem;
+}
+.letter p { line-height: 2.05rem; }
+.letter .salute { color: var(--red); }
+.letter .sign { text-align: right; color: var(--muted); }
+
 .method summary { cursor: pointer; font-size: var(--step--1); letter-spacing: 0.12em; color: var(--red); }
 .method[open] summary { margin-bottom: 0.5rem; }
 

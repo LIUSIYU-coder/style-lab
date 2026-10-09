@@ -1,15 +1,17 @@
 // 兑换码管理工具。在服务器上运行:
-//   node scripts/codes.ts make 50 [批次名]   生成 50 个兑换码,保存为 codes-批次名.csv(可直接导入小红书卡密)
+//   node scripts/codes.ts make 50 [批次名]   生成 50 个兑换码,保存为 data/codes-批次名.csv(可导入小红书卡密)
+//                                            加 SITE=你的域名 时每行写成「网址 … 兑换码 …」
 //   node scripts/codes.ts check XXXX-XXXX-XXXX   查看使用情况
 //   node scripts/codes.ts reset XXXX-XXXX-XXXX   清空已绑定设备(买家换手机)
 //   node scripts/codes.ts disable XXXX-XXXX-XXXX 作废(退款后)
 //   node scripts/codes.ts stats                  统计
 import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { CodeStore, MAX_DEVICES } from '../server/codes.ts';
 
 const root = join(import.meta.dirname, '..');
-const store = new CodeStore(process.env.DATA_FILE ?? join(root, 'data', 'codes.json'));
+const dataFile = process.env.DATA_FILE ?? join(root, 'data', 'codes.json');
+const store = new CodeStore(dataFile);
 const [cmd, arg, arg2] = process.argv.slice(2);
 
 function usage(): never {
@@ -24,8 +26,11 @@ switch (cmd) {
     const batch = arg2 ?? new Date().toISOString().slice(0, 10);
     if (!/^[\w-]{1,32}$/.test(batch)) usage();
     const codes = store.create(n, batch);
-    const file = join(root, `codes-${batch}.csv`);
-    writeFileSync(file, codes.join('\n') + '\n', { flag: 'a' });
+    const file = join(dirname(dataFile), `codes-${batch}.csv`);
+    // 设置了 SITE 时，每一行卡密都带上网址，买家收到卡密就知道去哪里打开
+    const site = process.env.SITE;
+    const lines = codes.map(c => (site ? `网址 https://${site}  兑换码 ${c}` : c));
+    writeFileSync(file, lines.join('\n') + '\n', { flag: 'a' });
     console.log(`已生成 ${codes.length} 个兑换码,追加保存到 ${file}`);
     console.log('提示:这个 CSV 是明文兑换码,导入店铺后请从服务器上删掉或妥善保管。');
     break;
