@@ -1,12 +1,9 @@
-import 'augmented-ui/aug-core.min.css';
-import 'augmented-ui/region-mixins.min.css';
-import 'augmented-ui/border-inlay-mixins.min.css';
 import './style.css';
 import { computeChart, type BirthInput, type Chart, type Gender } from './engine/chart.ts';
 import { lunarDayName, lunarMonths, lunarToSolar, lunarYearLabel, solarToLunar } from './engine/calendar.ts';
 import { PROVINCES } from './engine/regions.ts';
 import { buildLifeCode, codeLines, type LifeCode } from './engine/profile.ts';
-import { AXES, AXIS_POLES, clockLabel, planLife, shichen, TOTAL_CHOICES, type Effects, type PlannedSlot } from './engine/story.ts';
+import { agesLabel, AXES, AXIS_POLES, clockLabel, environmentFor, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, type Effects, type ResolvedBeat, type StoryContext } from './engine/story.ts';
 import { sceneSvg } from './scene.ts';
 import { clearSave, loadSave, writeSave } from './save.ts';
 import { buildReport, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
@@ -15,9 +12,13 @@ type ScreenId = 'intro' | 'form' | 'decode' | 'code' | 'stage' | 'result';
 
 interface Game {
   input: BirthInput;
+  /** 玩家填写的出生城市,用于剧情里的"家乡" */
+  place: string | null;
   chart: Chart;
   code: LifeCode;
-  plan: PlannedSlot[];
+  ctx: StoryContext;
+  /** 剧情状态:前面的选择留下的标记 */
+  flags: Set<string>;
   choices: Choice[];
   /** 每一步选的是第几个选项，用于存档 */
   picks: number[];
@@ -26,7 +27,7 @@ interface Game {
 let game: Game | null = null;
 let typingTimer = 0;
 
-const OPTION_MARKS = ['甲', '乙', '丙'];
+const OPTION_MARKS = ['甲', '乙', '丙', '丁', '戊'];
 const MIN_YEAR = 1920;
 const MAX_YEAR = 2026;
 
@@ -44,35 +45,11 @@ function esc(s: string | number): string {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
-/* ---------------- 切角外框 ---------------- */
-
-// 用 augmented-ui 给各类元素加切角和渐变边框；已手动指定的元素不覆盖。
-const AUG: Array<[string, string]> = [
-  ['.btn.primary', 'tl-clip br-clip border'],
-  ['.btn:not(.primary):not(.ghost)', 'tl-clip br-clip border'],
-  ['.option', 'tl-clip br-clip border'],
-  ['.panel', 'tl-clip br-clip border'],
-  ['.talisman', 'tl-clip br-clip border'],
-  ['.terminal', 'tr-clip bl-clip border'],
-  ['.env', 'tl-clip border'],
-  ['.outcome', 'tl-clip br-clip border'],
-  ['.yun li', 'tl-clip br-clip border'],
-];
-
-function augment(root: ParentNode = document) {
-  for (const [sel, value] of AUG) {
-    root.querySelectorAll(sel).forEach(el => {
-      if (!el.hasAttribute('data-augmented-ui')) el.setAttribute('data-augmented-ui', value);
-    });
-  }
-}
-
 /* ---------------- 页面切换 ---------------- */
 
 function show(id: ScreenId, render?: () => void) {
   const update = () => {
     render?.();
-    augment();
     document.querySelectorAll<HTMLElement>('.screen').forEach(s => (s.hidden = s.id !== `screen-${id}`));
     window.scrollTo(0, 0);
   };
@@ -181,12 +158,12 @@ function setupForm() {
       error.hidden = false;
       return;
     }
-    game = newGame({
-      time: { ...date, hour: +tm[1], minute: +tm[2] },
-      gender,
-      longitude: city.value ? Number(city.value) : null,
-    });
-    writeSave({ input: game.input, picks: [] });
+    const place = city.value ? (city.selectedOptions[0]?.text ?? null) : null;
+    game = newGame(
+      { time: { ...date, hour: +tm[1], minute: +tm[2] }, gender, longitude: city.value ? Number(city.value) : null },
+      place,
+    );
+    writeSave({ input: game.input, place, picks: [] });
     show('decode', startDecode);
   });
 }
@@ -293,72 +270,83 @@ function renderCode() {
     .join('');
 
   $('#screen-code').innerHTML = `
-    <p class="eyebrow">step 03 · character ready</p>
+    <p class="eyebrow">第三步 · 命盘编号 ${esc(code.seedHex)}</p>
     <h2 class="h2" id="code-title" tabindex="-1">你的底层代码</h2>
-    <div class="hud-bar"><span class="lv">LV.0 · 角色已生成</span><span>SEED ${esc(code.seedHex)}</span></div>
 
     <div class="panel reveal">
-      <div class="panel-title"><span>四柱源码</span><b>${esc(chart.lunarText)} · 生肖${esc(chart.zodiac)}</b></div>
+      <div class="panel-title"><span>四柱八字</span><b>${esc(chart.lunarText)} · 生肖${esc(chart.zodiac)}</b></div>
       <div class="pillars">${pillars}</div>
     </div>
 
     <div class="panel reveal">
       <div class="kernel">
         <div class="kernel-hex"><span class="el-${chart.dayMaster.element}">${esc(chart.dayMaster.gan)}</span></div>
-        <h3>${esc(code.kernel)} · ${esc(code.kernelTitle)}内核</h3>
+        <h3>日主 ${esc(code.kernel)} · ${esc(code.kernelTitle)}</h3>
         <p>意象：${esc(code.kernelImage)}。${esc(code.kernelDesc)}</p>
       </div>
-      <div class="chips"><span class="chip magenta">${esc(code.power.label)}</span><span class="chip">${esc(code.power.desc)}</span></div>
+      <div class="chips"><span class="chip gold">${esc(code.power.label)}</span><span class="chip">${esc(code.power.desc)}</span></div>
     </div>
 
     <div class="panel reveal">
-      <div class="panel-title"><span>初始属性</span><b>五行占比 %</b></div>
+      <div class="panel-title"><span>五行</span><b>占比 %</b></div>
       <div class="radar-wrap">${radar(code)}</div>
     </div>
 
     <div class="split">
       <div class="panel module reveal">
-        <span class="hint">天赋模块</span>
+        <span class="hint">天赋</span>
         <b>${esc(code.talent.name)}</b>
         <p>${esc(code.talent.desc)}</p>
       </div>
       <div class="panel module reveal">
-        <span class="hint">成长空间</span>
+        <span class="hint">长进空间</span>
         <b class="el-${code.patch.element}">${esc(code.patch.element)} · ${esc(code.patch.stat)}</b>
         <p>${esc(code.patch.desc)}</p>
       </div>
     </div>
 
     <div class="panel reveal">
-      <div class="panel-title"><span>运行环境（大运）</span><b>${esc(chart.startYunText)}</b></div>
+      <div class="panel-title"><span>大运</span><b>${esc(chart.startYunText)}</b></div>
       <div class="yun-scroll" tabindex="0" aria-label="大运列表，可横向滑动"><ul class="yun">${yun}</ul></div>
     </div>
 
     <p class="fine">以上设定只用来生成这局游戏里的角色。接下来的 24 个小时，由你决定怎么过。</p>
-    <button class="btn primary" type="button" id="btn-play">进入人生</button>
+    <button class="btn primary" type="button" id="btn-play">清晨 6 点，出生</button>
   `;
   $('#btn-play').onclick = () => show('stage', renderSlot);
 }
 
 /* ---------------- 人生 24 小时 ---------------- */
 
-function newGame(input: BirthInput, picks: number[] = []): Game {
+function newGame(input: BirthInput, place: string | null, picks: number[] = []): Game {
   const chart = computeChart(input);
   const code = buildLifeCode(chart);
-  const g: Game = { input, chart, code, plan: planLife(chart, code.seed), choices: [], picks: [] };
+  const g: Game = { input, place, chart, code, ctx: storyContext(code.seed, place), flags: new Set(), choices: [], picks: [] };
   for (const i of picks) {
-    const p = g.plan[g.choices.length];
-    if (!p || !p.event.options[i]) break;
-    record(g, p, i);
+    if (g.choices.length >= TOTAL_CHOICES) break;
+    const beat = current(g);
+    if (!beat.options[i]) break;
+    record(g, beat, i);
   }
   return g;
 }
 
-function record(g: Game, p: PlannedSlot, i: number) {
-  const opt = p.event.options[i];
-  const alternatives = p.event.options.filter((_, j) => j !== i).map(o => ({ text: o.text, effects: o.effects }));
+function current(g: Game): ResolvedBeat {
+  return resolveBeat(g.choices.length, g.ctx, g.flags);
+}
+
+function record(g: Game, r: ResolvedBeat, i: number) {
+  const opt = r.options[i];
+  opt.set.forEach(f => g.flags.add(f));
   g.picks.push(i);
-  g.choices.push({ hour: p.slot.hour, agesLabel: p.slot.agesLabel, eventId: p.event.id, optionText: opt.text, effects: opt.effects, alternatives });
+  g.choices.push({
+    hour: r.beat.hour,
+    agesLabel: agesLabel(r.beat),
+    eventId: r.beat.id,
+    optionText: opt.text,
+    effects: opt.effects,
+    alternatives: r.options.filter((_, j) => j !== i).map(o => ({ text: o.text, effects: o.effects })),
+  });
 }
 
 function effectChips(effects: Effects): string {
@@ -366,100 +354,75 @@ function effectChips(effects: Effects): string {
     .map(a => {
       const v = effects[a]!;
       const pole = AXIS_POLES[a][v > 0 ? 0 : 1];
-      return `<span class="gain">+${Math.abs(v)} ${esc(pole)}</span>`;
+      return `<span class="gain">${esc(pole)} +${Math.abs(v)}</span>`;
     })
     .join('');
 }
 
-function hud(p: PlannedSlot, done: number): string {
-  const bar = Array.from({ length: TOTAL_CHOICES }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('');
-  return `<div class="hud-block"><div class="hud-bar"><span class="lv">LV.${p.slot.stage + 1} · ${esc(p.stage.name)}</span><span>EXP ${done}/${TOTAL_CHOICES}</span></div>
-    <div class="exp" role="progressbar" aria-label="人生进度" aria-valuemin="0" aria-valuemax="${TOTAL_CHOICES}" aria-valuenow="${done}">${bar}</div></div>`;
-}
-
-/** 字符先乱码滚动，再逐个定格（Arwes 风格的解密效果，自己实现）。 */
-function decipher(el: HTMLElement, text: string) {
-  if (reducedMotion()) {
-    el.textContent = text;
-    return;
-  }
-  const glyphs = '甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥01#%&';
-  let frame = 0;
-  const total = 14;
-  const tick = () => {
-    frame++;
-    el.textContent = [...text]
-      .map((ch, i) => (ch === ' ' || ch === ':' || frame > (i / text.length) * total + 4 ? ch : glyphs[(frame * 7 + i * 13) % glyphs.length]))
-      .join('');
-    if (frame < total + 5) requestAnimationFrame(tick);
-    else el.textContent = text;
-  };
-  tick();
+/** 一天的进度:24 格,已过的小时是暖黄,当前这一小时是红色。 */
+function dayline(done: number, stageName: string, timeOfDay: string): string {
+  const cells = Array.from({ length: TOTAL_CHOICES }, (_, i) => `<i class="${i < done ? 'on' : i === done ? 'now' : ''}"></i>`).join('');
+  return `<div class="dayline">
+    <div class="dayline-top"><b>${esc(stageName)} · ${esc(timeOfDay)}</b><span>这一天过了 ${done} 小时</span></div>
+    <div class="dayline-bar" role="progressbar" aria-label="一天的进度" aria-valuemin="0" aria-valuemax="${TOTAL_CHOICES}" aria-valuenow="${done}">${cells}</div>
+    <div class="dayline-ends"><span>06:00 出生</span><span>05:00 破晓</span></div>
+  </div>`;
 }
 
 function renderSlot() {
   if (!game) return;
   const g = game;
-  const p = g.plan[g.choices.length];
-  const ev = p.event;
-  const env = p.environment;
-  const clock = clockLabel(p.slot.hour);
+  const r = current(g);
+  const beat = r.beat;
+  const stage = STAGES[beat.stage];
+  const env = environmentFor(g.chart, beat.ages);
+  const clock = clockLabel(beat.hour);
   const screen = $('#screen-stage');
   screen.innerHTML = `
-    ${hud(p, g.choices.length)}
-    <figure class="scene" data-augmented-ui="tl-clip br-clip border">
-      ${sceneSvg(p.slot.hour, ev.scene, `${clock} 的场景`)}
-      <figcaption class="scene-hud">
-        <span class="clock" id="scene-clock">${clock}</span>
-        <span class="sc">${shichen(p.slot.hour)}</span>
-        <span class="age">${esc(p.slot.agesLabel)}</span>
-      </figcaption>
-    </figure>
-    <div class="stage-name"><h2 id="stage-title" tabindex="-1">人生第 ${g.choices.length + 1} 小时</h2><span>// ${esc(p.stage.name)} · ${esc(p.stage.codeName)}</span></div>
-    <div class="env"><span class="tag">环境</span><b class="${env.element ? `el-${env.element}` : ''}">${esc(env.ganZhi)}</b><span>${esc(env.relation)}</span></div>
-    <p class="event-text reveal">${esc(ev.text)}</p>
+    ${dayline(g.choices.length, stage.name, stage.timeOfDay)}
+    <div class="moment">
+      <div class="calendar" aria-hidden="true">
+        <span class="cal-head">第 ${g.choices.length + 1} 小时</span>
+        <span class="cal-num">${clock}</span>
+        <span class="cal-sub">${shichen(beat.hour)} · ${esc(agesLabel(beat))}</span>
+      </div>
+      <figure class="photo">${sceneSvg(beat.hour, r.scene, `${clock}，${agesLabel(beat)}`)}</figure>
+    </div>
+    <div class="stage-name"><h2 id="stage-title" tabindex="-1">人生第 ${g.choices.length + 1} 小时</h2><span>${esc(stage.name)}，${esc(agesLabel(beat))}</span></div>
+    <div class="env"><span class="tag">大运</span><b class="${env.element ? `el-${env.element}` : ''}">${esc(env.ganZhi)}</b><span>${esc(env.relation)}</span></div>
+    <p class="event-text reveal">${esc(r.text)}</p>
     <div class="options" id="options">
-      ${ev.options
-        .map(
-          (o, i) => `<button class="option reveal" type="button" data-i="${i}" data-augmented-ui="tl-clip br-clip border"><span class="mark">${OPTION_MARKS[i]}</span><span>${esc(o.text)}</span></button>`,
-        )
+      ${r.options
+        .map((o, i) => `<button class="option reveal" type="button" data-i="${i}"><span class="mark">${OPTION_MARKS[i]}</span><span>${esc(o.text)}</span></button>`)
         .join('')}
     </div>
   `;
-  decipher($('#scene-clock'), clock);
-  screen.querySelectorAll<HTMLButtonElement>('.option').forEach(btn =>
-    btn.addEventListener('click', () => choose(Number(btn.dataset.i))),
-  );
+  screen.querySelectorAll<HTMLButtonElement>('.option').forEach(btn => btn.addEventListener('click', () => choose(Number(btn.dataset.i))));
 }
 
 function choose(i: number) {
   if (!game) return;
   const g = game;
-  const p = g.plan[g.choices.length];
-  const opt = p.event.options[i];
-  record(g, p, i);
-  writeSave({ input: g.input, picks: g.picks });
+  const r = current(g);
+  const opt = r.options[i];
+  record(g, r, i);
+  writeSave({ input: g.input, place: g.place, picks: g.picks });
 
   const isLast = g.choices.length >= TOTAL_CHOICES;
-  const next = g.plan[g.choices.length];
-  const nextLabel = isLast ? '生成选择画像' : `前往 ${clockLabel(next.slot.hour)}`;
-  $('#screen-stage .hud-block').outerHTML = hud(p, g.choices.length);
+  const nextLabel = isLast ? '天亮了，看看这一生' : `到 ${clockLabel(current(g).beat.hour)} 去`;
+  const stage = STAGES[r.beat.stage];
+  $('#screen-stage .dayline').outerHTML = dayline(g.choices.length, stage.name, stage.timeOfDay);
   $('#options').outerHTML = `
     <div class="outcome reveal" aria-live="polite">
       <p class="picked">你选择了「${esc(opt.text)}」</p>
       <p class="story">${esc(opt.result)}</p>
       <div class="chips">${effectChips(opt.effects)}</div>
-      <button class="btn primary" type="button" id="btn-next" data-augmented-ui="tl-clip br-clip border">${nextLabel}</button>
+      <button class="btn primary" type="button" id="btn-next">${nextLabel}</button>
     </div>`;
-  augment($('#screen-stage'));
   const btn = $('#btn-next');
   btn.focus({ preventScroll: true });
   btn.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
-  btn.onclick = () => {
-    if (!isLast) return show('stage', renderSlot);
-    requestTiltPermission();
-    show('result', renderResult);
-  };
+  btn.onclick = () => (isLast ? show('result', renderResult) : show('stage', renderSlot));
 }
 
 /* ---------------- 结果 ---------------- */
@@ -486,7 +449,7 @@ function dial(r: Report): string {
     })
     .join('');
   const path = r.timeline.map(t => pos(t.hour, R)).map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
-  return `<svg class="dial-chart" viewBox="0 0 300 300" role="img" aria-label="人生一日表盘：金色节点是体现「${esc(r.mainPole)}」的时刻">
+  return `<svg class="dial-chart" viewBox="0 0 300 300" role="img" aria-label="人生一日表盘：红色节点是体现「${esc(r.mainPole)}」的时刻">
     <circle class="ring" cx="${cx}" cy="${cy}" r="${R}"/>
     <path class="trail" d="${path}"/>
     ${ticks}${nodes}
@@ -497,41 +460,6 @@ function dial(r: Report): string {
 
 function section(title: string, body: string, note = ''): string {
   return `<section class="panel report-block"><div class="panel-title"><span>${esc(title)}</span>${note ? `<b>${note}</b>` : ''}</div>${body}</section>`;
-}
-
-/** 全息卡：跟随手指或陀螺仪倾斜，高光和镭射纹随角度移动；没有输入时自动缓慢流光。 */
-let tiltPermission = false;
-function requestTiltPermission() {
-  const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> } | undefined;
-  if (DOE?.requestPermission) {
-    DOE.requestPermission().then(r => (tiltPermission = r === 'granted')).catch(() => {});
-  } else {
-    tiltPermission = true;
-  }
-}
-
-function setupHolo(wrap: HTMLElement) {
-  if (reducedMotion()) return;
-  const set = (x: number, y: number) => {
-    wrap.classList.add('live');
-    wrap.style.setProperty('--px', `${(x * 100).toFixed(1)}%`);
-    wrap.style.setProperty('--py', `${(y * 100).toFixed(1)}%`);
-    wrap.style.setProperty('--rx', `${((0.5 - y) * 14).toFixed(2)}deg`);
-    wrap.style.setProperty('--ry', `${((x - 0.5) * 18).toFixed(2)}deg`);
-  };
-  wrap.addEventListener('pointermove', e => {
-    const b = wrap.getBoundingClientRect();
-    set((e.clientX - b.left) / b.width, (e.clientY - b.top) / b.height);
-  });
-  wrap.addEventListener('pointerleave', () => wrap.classList.remove('live'));
-  if (tiltPermission) {
-    const onTilt = (e: DeviceOrientationEvent) => {
-      if (!wrap.isConnected) return window.removeEventListener('deviceorientation', onTilt);
-      if (e.gamma == null || e.beta == null) return;
-      set(Math.min(1, Math.max(0, 0.5 + e.gamma / 50)), Math.min(1, Math.max(0, 0.5 + (e.beta - 45) / 50)));
-    };
-    window.addEventListener('deviceorientation', onTilt);
-  }
 }
 
 function renderResult() {
@@ -560,28 +488,22 @@ function renderResult() {
 
   const screen = $('#screen-result');
   screen.innerHTML = `
-    <p class="eyebrow">step 04 · game clear</p>
-    <div class="hud-bar"><span class="lv">人生 24 小时 · 通关</span><span>EXP ${TOTAL_CHOICES}/${TOTAL_CHOICES}</span></div>
-
-    <div class="holo" id="holo">
-      <div class="share-card" data-augmented-ui="tl-clip br-clip border">
-        <div class="foil" aria-hidden="true"></div>
-        <div class="glare" aria-hidden="true"></div>
-        <p class="eyebrow">角色卡 · ${esc(g.code.seedHex)}</p>
-        <h2 class="result-title" id="result-title" tabindex="-1">${esc(r.title)}</h2>
-        <p class="motto">${esc(r.archetype.motto)}</p>
-        <div class="seal" aria-hidden="true"><span>代</span><span>底</span><span>码</span><span>层</span></div>
-        <div class="chips">${tags}</div>
-        <p class="card-line">内核 <b class="el-${g.chart.dayMaster.element}">${esc(g.code.kernel)}</b> · 主轴 <b>${esc(r.mainPole)}</b> · 改写 <b>${r.rewriteCount}</b> 行代码</p>
-        <div class="axes">${axes}</div>
-        <div class="card-foot"><span>${esc(g.code.kernelTitle)}内核 · ${esc(g.code.talent.name)}</span><span>人生底层代码</span></div>
-      </div>
+    <p class="eyebrow">第四步 · 天亮了</p>
+    <div class="share-card reveal">
+      <div class="stamp" aria-hidden="true"><div><b>${esc(g.chart.dayMaster.gan)}</b><small>${esc(g.code.kernelImage)}</small></div></div>
+      <p class="eyebrow">人生纪念卡</p>
+      <h2 class="result-title" id="result-title" tabindex="-1">${esc(r.title)}</h2>
+      <p class="motto">${esc(r.archetype.motto)}</p>
+      <div class="chips">${tags}</div>
+      <p class="card-line">日主 <b>${esc(g.code.kernel)}</b> · 主轴 <b>${esc(r.mainPole)}</b> · 改写了 <b>${r.rewriteCount}</b> 行底层代码</p>
+      <div class="axes">${axes}</div>
+      <div class="card-foot"><p><b>人生底层代码</b><span>和${esc(g.ctx.friend)}、外婆、巷口的早餐摊一起，过完了这一天。</span></p><div class="postmark" aria-hidden="true">${esc(g.ctx.home)}<br>06:00—05:00<br>${esc(g.code.seedHex.slice(2))}</div></div>
     </div>
-    <p class="shot-hint">截图这张卡片，就可以分享你的角色卡</p>
+    <p class="shot-hint">截图这张纪念卡，就可以分享给朋友</p>
 
     ${section('你的选择风格', `<p class="insight">${esc(r.archetype.desc)}</p><div class="traits">${r.traits.map(t => `<div class="trait"><b>${esc(t.pole)}</b><p>${esc(t.evidence)}</p></div>`).join('')}</div>`)}
 
-    ${section('人生一日表盘', `<div class="dial-wrap">${dial(r)}</div><p class="hint">金色节点是体现「${esc(r.mainPole)}」的时刻，共 ${r.timeline.filter(t => t.main).length} 个。</p>`, '24 个选择')}
+    ${section('人生一日表盘', `<div class="dial-wrap">${dial(r)}</div><p class="hint">红色节点是体现「${esc(r.mainPole)}」的时刻，共 ${r.timeline.filter(t => t.main).length} 个。</p>`, '24 个选择')}
 
     ${section('名场面', moments, `最能体现「${esc(r.mainPole)}」`)}
 
@@ -619,13 +541,12 @@ function renderResult() {
     </div>
     <p class="fine">本游戏用传统历法生成角色设定，所有剧情与分析都是虚构的娱乐内容，不构成任何预测或建议。出生信息只在你的浏览器里计算，不会上传。</p>
   `;
-  setupHolo($('#holo'));
   $('#btn-full').onclick = () => {
     $('#full-note').hidden = false;
   };
   const replay = () => {
-    game = newGame(g.input);
-    writeSave({ input: g.input, picks: [] });
+    game = newGame(g.input, g.place);
+    writeSave({ input: g.input, place: g.place, picks: [] });
     show('stage', renderSlot);
   };
   $('#btn-replay').onclick = replay;
@@ -639,15 +560,14 @@ function renderResult() {
 /* ---------------- 启动 ---------------- */
 
 function boot() {
-  augment();
   setupForm();
   $('#btn-start').onclick = () => show('form');
   const saved = loadSave();
   if (saved) {
-    const g = newGame(saved.input, saved.picks);
+    const g = newGame(saved.input, saved.place, saved.picks);
     const resume = $('#btn-resume');
     const done = g.choices.length >= TOTAL_CHOICES;
-    resume.textContent = done ? '查看上次的选择画像' : `继续上次的人生 · 第 ${g.choices.length + 1} 小时`;
+    resume.textContent = done ? '再看看上次的人生纪念卡' : `接着过上次那一天 · 第 ${g.choices.length + 1} 小时`;
     resume.hidden = false;
     resume.onclick = () => {
       game = g;

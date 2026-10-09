@@ -25,11 +25,11 @@ const KERNELS: Record<string, { title: string; image: string; desc: string }> = 
 };
 
 export const TALENTS: Record<Family, { name: string; desc: string }> = {
-  比劫: { name: '自主模块', desc: '自己的事自己定，遇事第一反应是靠自己。' },
-  食伤: { name: '表达模块', desc: '想法多，喜欢输出、创造和被看见。' },
-  财星: { name: '务实模块', desc: '关注结果和手里的资源，擅长把事情落地。' },
-  官杀: { name: '秩序模块', desc: '对规则和责任敏感，压力下能扛事。' },
-  印星: { name: '学习模块', desc: '爱吸收、爱琢磨，需要一点安全感再出发。' },
+  比劫: { name: '自主型', desc: '自己的事自己定，遇事第一反应是靠自己。' },
+  食伤: { name: '表达型', desc: '想法多，喜欢输出、创造和被看见。' },
+  财星: { name: '务实型', desc: '关注结果和手里的资源，擅长把事情落地。' },
+  官杀: { name: '担当型', desc: '对规则和责任敏感，压力下能扛事。' },
+  印星: { name: '好学型', desc: '爱吸收、爱琢磨，需要一点安全感再出发。' },
 };
 
 export interface LifeCode {
@@ -63,13 +63,13 @@ export function buildLifeCode(chart: Chart): LifeCode {
     kernelImage: k.image,
     kernelDesc: k.desc,
     power: chart.strong
-      ? { label: '高功率运行', desc: '内核能量足，适合主动出击。' }
-      : { label: '节能运行', desc: '内核轻盈，擅长借力和协作。' },
+      ? { label: '底气足', desc: '性子里有股劲，适合主动出击。' }
+      : { label: '身段软', desc: '性子柔和，擅长借力和合作。' },
     talent: { family: chart.dominantFamily, ...talent },
     patch: {
       element: chart.weakestElement,
       stat: ELEMENT_STAT[chart.weakestElement],
-      desc: `「${ELEMENT_STAT[chart.weakestElement]}」是初始值最低的属性，也是这局游戏里成长空间最大的一项。`,
+      desc: `「${ELEMENT_STAT[chart.weakestElement]}」是初始值最低的属性，也是这一生里最有长进空间的一项。`,
     },
     stats: ELEMENTS.map(e => ({ element: e, stat: ELEMENT_STAT[e], value: chart.elements[e] })),
     seed,
@@ -77,23 +77,23 @@ export function buildLifeCode(chart: Chart): LifeCode {
   };
 }
 
-/** 解码动画里逐行打出的"源代码"。 */
+/** 推算稿纸上逐行打出的内容。 */
 export function codeLines(chart: Chart, code: LifeCode): string[] {
   const t = chart.input;
   const pad = (n: number) => String(n).padStart(2, '0');
   const corr = chart.correction;
   const notes: string[] = [];
-  if (corr.dstMinutes) notes.push('夏令时 −60min');
-  if (corr.solarMinutes !== null) notes.push(`真太阳时 ${corr.solarMinutes >= 0 ? '+' : '−'}${Math.abs(Math.round(corr.solarMinutes))}min`);
+  if (corr.dstMinutes) notes.push('夏令时减一小时');
+  if (corr.solarMinutes !== null) notes.push(`真太阳时${corr.solarMinutes >= 0 ? '加' : '减'} ${Math.abs(Math.round(corr.solarMinutes))} 分钟`);
   return [
-    `> 读取出生参数  ${t.year}-${pad(t.month)}-${pad(t.day)} ${pad(t.hour)}:${pad(t.minute)}`,
-    notes.length ? `> 时间校正      ${notes.join(' · ')}` : '> 时间校正      按钟表时间',
-    `> 换算历法      ${chart.lunarText} · 生肖${chart.zodiac}`,
-    `> 排列四柱      ${chart.pillars.map(p => p.gan + p.zhi).join('  ')}`,
-    `> 定位内核      ${code.kernel} · ${code.kernelTitle}`,
-    `> 统计五行      ${code.stats.map(s => `${s.element}${s.value}`).join(' ')}`,
-    `> 载入模块      ${code.talent.name}`,
-    `> 生成种子      ${code.seedHex}`,
-    '> 编译完成。',
+    `出生时辰：${t.year} 年 ${t.month} 月 ${t.day} 日 ${pad(t.hour)}:${pad(t.minute)}`,
+    `时间校正：${notes.length ? notes.join('，') : '按钟表时间'}`,
+    `农历：${chart.lunarText}，生肖${chart.zodiac}`,
+    `四柱：${chart.pillars.map(p => p.gan + p.zhi).join('　')}`,
+    `日主：${code.kernel}，${code.kernelImage}`,
+    `五行：${code.stats.map(s => `${s.element} ${s.value}`).join('　')}`,
+    `天赋：${code.talent.name}`,
+    `命盘编号：${code.seedHex}`,
+    '推算完毕，翻开你的这一天。',
   ];
 }

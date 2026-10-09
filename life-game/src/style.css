@@ -1,28 +1,27 @@
-/* 布局:手机竖屏单列(最宽 30rem 居中),像一块游戏角色面板。
-   风格:赛博玄学,刻意只做深色一种主题:深紫夜空 + 青色/品红霓虹 + 金色点缀,四柱是发光的符箓卡。 */
+/* 布局：手机竖屏单列，像一本翻开的旧相册，最宽 30rem 居中。
+   风格：人间烟火。刻意只做一种暖色纸面主题：旧纸底、墨色字、搪瓷红印章、老绿窗框、灯泡的暖黄。 */
 :root {
-  --bg: #0b0718;
-  --bg-glow-1: #ff4fd8;
-  --bg-glow-2: #4ff0ff;
-  --surface: #150d2e;
-  --surface-2: #1e1442;
-  --line: #3a2a6e;
-  --fg: #f1ecff;
-  --muted: #a99fcc;
-  --cyan: #4ff0ff;
-  --magenta: #ff4fd8;
-  --gold: #ffd36e;
-  --ink: #0b0718;
-  --danger: #ff6b81;
-  --wood: #2ecf8a;
-  --fire: #ff6070;
-  --earth: #e0a53a;
-  --metal: #dcd6ff;
-  --water: #4d9dff;
+  --bg: #efe6d6;
+  --paper: #fbf6ec;
+  --paper-2: #f3ead9;
+  --line: #dccdb3;
+  --ink: #2e2822;
+  --muted: #76695a;
+  --red: #b83d2c;
+  --red-soft: #f3d8cf;
+  --cream: #fff8ee;
+  --green: #2e6b5a;
+  --amber: #c98a22;
+  --amber-soft: #f6e2b8;
+  --wood: #3c7a4c;
+  --fire: #b83d2c;
+  --earth: #9a6f22;
+  --metal: #7b7066;
+  --water: #2f5b82;
+  --shadow: rgb(92 62 30 / 0.28);
 
   --font-display: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "SimSun", serif;
   --font-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
-  --font-hud: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   --step--1: 0.8125rem;
   --step-0: 1rem;
@@ -30,11 +29,9 @@
   --step-2: 1.5rem;
   --step-3: 2.25rem;
   --step-4: 3.25rem;
+  --radius: 14px;
 
-  --glow-cyan: 0 0 6px color-mix(in oklab, var(--cyan) 75%, transparent), 0 0 22px color-mix(in oklab, var(--cyan) 35%, transparent);
-  --glow-magenta: 0 0 6px color-mix(in oklab, var(--magenta) 75%, transparent), 0 0 22px color-mix(in oklab, var(--magenta) 35%, transparent);
-
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -48,263 +45,191 @@ body {
   padding-inline: 16px;
   padding-block: max(20px, env(safe-area-inset-top, 0px)) max(40px, env(safe-area-inset-bottom, 0px));
   background:
-    radial-gradient(36rem 26rem at 10% -6rem, color-mix(in oklab, var(--bg-glow-1) 22%, transparent), transparent 70%),
-    radial-gradient(30rem 24rem at 100% 18rem, color-mix(in oklab, var(--bg-glow-2) 14%, transparent), transparent 70%),
+    radial-gradient(40rem 26rem at 50% -6rem, color-mix(in oklab, var(--amber-soft) 70%, transparent), transparent 70%),
     var(--bg);
-  color: var(--fg);
+  color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--step-0);
-  line-height: 1.65;
+  line-height: 1.7;
   overflow-x: clip;
 }
-/* 背景网格 + 扫描线 */
-body::before {
+/* 纸张纹理:内联 SVG 噪声 */
+body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background:
-    repeating-linear-gradient(0deg, color-mix(in oklab, var(--fg) 3%, transparent) 0 1px, transparent 1px 3px),
-    linear-gradient(color-mix(in oklab, var(--cyan) 7%, transparent) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, color-mix(in oklab, var(--cyan) 7%, transparent) 1px, transparent 1px) 0 0 / 32px 32px;
-  mask-image: linear-gradient(transparent 0%, black 55%, black 100%);
-  -webkit-mask-image: linear-gradient(transparent 0%, black 55%, black 100%);
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .18 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 #app { position: relative; max-width: 30rem; margin-inline: auto; }
 
 .screen { display: flex; flex-direction: column; gap: 1.25rem; }
-.screen[hidden] { display: none; }
 
 h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 700; text-wrap: balance; }
 h1:focus, h2:focus { outline: none; }
 p { margin: 0; text-wrap: pretty; }
 
-.eyebrow {
-  font-family: var(--font-hud);
-  font-size: 0.75rem;
-  letter-spacing: 0.16em;
-  color: var(--cyan);
-  text-transform: uppercase;
-}
-.h2 { font-size: var(--step-3); line-height: 1.2; text-shadow: var(--glow-magenta); }
-.lede { font-size: var(--step-1); line-height: 1.7; }
-.meta { color: var(--muted); font-family: var(--font-hud); font-size: 0.75rem; letter-spacing: 0.06em; }
-.fine { color: var(--muted); font-size: var(--step--1); line-height: 1.6; }
+.eyebrow { font-size: var(--step--1); letter-spacing: 0.2em; color: var(--red); }
+.h2 { font-size: var(--step-3); line-height: 1.25; }
+.lede { font-family: var(--font-display); font-size: var(--step-1); line-height: 1.8; }
+.meta { color: var(--muted); font-size: var(--step--1); }
+.fine { color: var(--muted); font-size: var(--step--1); line-height: 1.7; }
 .hint { color: var(--muted); font-size: var(--step--1); }
-.hud { font-family: var(--font-hud); letter-spacing: 0.08em; }
 
 /* ---------- 按钮 ---------- */
 .btn {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-height: 54px;
   padding: 0.75rem 1.25rem;
-  border: 1px solid var(--line);
-  background: color-mix(in oklab, var(--surface) 80%, transparent);
-  color: var(--fg);
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
+  font-family: var(--font-display);
   font-size: var(--step-1);
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   cursor: pointer;
-  transition: filter 0.2s, translate 0.15s;
+  box-shadow: 0 3px 0 var(--ink);
+  transition: translate 0.12s, box-shadow 0.12s, background-color 0.2s;
 }
-.btn:active { translate: 0 1px; }
-.btn:focus-visible, .seg-item:has(input:focus-visible), .check:has(input:focus-visible) {
-  outline: 2px solid var(--gold);
+.btn:active { translate: 0 2px; box-shadow: 0 1px 0 var(--ink); }
+.btn:hover { background: var(--cream); }
+.btn:focus-visible, .option:focus-visible, .seg-item:has(input:focus-visible), .check:has(input:focus-visible) {
+  outline: 3px solid color-mix(in oklab, var(--amber) 70%, transparent);
   outline-offset: 3px;
 }
-.option:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-.btn.primary {
-  border: 0;
-  background: linear-gradient(100deg, var(--cyan), var(--magenta));
-  color: var(--ink);
-  font-weight: 700;
-  box-shadow: 0 0 24px color-mix(in oklab, var(--magenta) 40%, transparent);
-}
-.btn.primary:hover { filter: brightness(1.1) saturate(1.1); }
-.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); font-size: var(--step-0); letter-spacing: 0.08em; }
-.btn.ghost:hover { color: var(--fg); }
-.btn:not(.primary):not(.ghost):hover { filter: brightness(1.25); }
+.btn.primary { background: var(--red); border-color: #7d2618; color: var(--cream); box-shadow: 0 3px 0 #7d2618; }
+.btn.primary:hover { background: color-mix(in oklab, var(--red) 90%, #000); }
+.btn.primary:active { box-shadow: 0 1px 0 #7d2618; }
+.btn.ghost { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); font-family: var(--font-body); font-weight: 400; font-size: var(--step-0); letter-spacing: 0.06em; }
+.btn.ghost:hover { color: var(--ink); background: transparent; }
 .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 .btn-row .btn { font-size: var(--step-0); letter-spacing: 0.06em; }
 
-/* ---------- 开场:霓虹罗盘 ---------- */
+/* ---------- 开场:时辰钟 ---------- */
 .intro { padding-top: 0.25rem; }
-.dial {
-  --size: min(17rem, 72vw);
+.clock {
   position: relative;
-  width: var(--size);
-  aspect-ratio: 1;
+  width: min(16rem, 68vw);
   max-width: 100%;
-  margin: 0.5rem auto 0.5rem;
+  margin: 0.25rem auto 0.25rem;
 }
-.ring { position: absolute; inset: 0; border-radius: 50%; }
-.ring-outer {
-  border: 1px solid color-mix(in oklab, var(--cyan) 70%, transparent);
-  box-shadow: var(--glow-cyan), inset 0 0 30px color-mix(in oklab, var(--cyan) 15%, transparent);
-  animation: spin 120s linear infinite;
-}
-.ring-inner {
-  inset: 18%;
-  border: 1px dashed color-mix(in oklab, var(--magenta) 70%, transparent);
-  box-shadow: 0 0 18px color-mix(in oklab, var(--magenta) 25%, transparent);
-  animation: spin 90s linear infinite reverse;
-}
-.ring span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 2rem;
-  height: 2rem;
-  margin: -1rem 0 0 -1rem;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-}
-.ring-outer span {
-  transform: rotate(calc(var(--i) * 30deg)) translateY(calc(var(--size) / -2 + 1.15rem));
-  font-size: var(--step-1);
-  color: var(--cyan);
-  text-shadow: var(--glow-cyan);
-}
-.ring-inner span {
-  transform: rotate(calc(var(--i) * 36deg)) translateY(calc(var(--size) * -0.32 + 1.1rem));
-  color: var(--magenta);
-  text-shadow: var(--glow-magenta);
-}
-.dial-core {
-  position: absolute;
-  inset: 36%;
-  display: grid;
-  place-items: center;
-  clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
-  background: linear-gradient(135deg, var(--cyan), var(--magenta));
-}
-.dial-core span {
-  display: grid;
-  place-items: center;
-  width: calc(100% - 4px);
-  height: calc(100% - 4px);
-  clip-path: inherit;
-  background: var(--surface);
-  font-family: var(--font-hud);
-  font-size: var(--step-2);
-  color: var(--gold);
-  text-shadow: 0 0 12px color-mix(in oklab, var(--gold) 70%, transparent);
-}
-@keyframes spin { to { rotate: 360deg; } }
+.clock svg { display: block; width: 100%; height: auto; }
+.clock .face { fill: var(--cream); stroke: var(--ink); stroke-width: 2; }
+.clock .rim { fill: none; stroke: var(--line); stroke-width: 10; }
+.clock .tick { stroke: var(--ink); stroke-width: 1.5; }
+.clock .branch { font-family: var(--font-display); font-size: 17px; font-weight: 700; fill: var(--ink); }
+.clock .branch.now { fill: var(--red); }
+.clock .hand { stroke: var(--red); stroke-width: 3.5; stroke-linecap: round; transform-origin: 120px 120px; animation: sweep 40s linear infinite; }
+.clock .hub { fill: var(--red); }
+.clock .steam { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; opacity: 0.6; animation: steam 3s ease-in-out infinite; }
+.clock .steam:nth-of-type(2) { animation-delay: 0.6s; }
+@keyframes sweep { to { rotate: 360deg; } }
+@keyframes steam { 0% { translate: 0 4px; opacity: 0; } 40% { opacity: 0.7; } 100% { translate: 0 -8px; opacity: 0; } }
 
-.title {
-  font-size: var(--step-4);
-  line-height: 1.08;
-  letter-spacing: 0.06em;
-  color: var(--fg);
-  text-shadow: var(--glow-magenta);
-  animation: power-on 1.4s ease-out both;
-}
-.title em { font-style: normal; color: var(--cyan); text-shadow: var(--glow-cyan); }
-@keyframes power-on {
-  from { opacity: 0.2; text-shadow: none; letter-spacing: 0.3em; }
-  to { opacity: 1; }
-}
+.title { font-size: var(--step-4); line-height: 1.12; letter-spacing: 0.06em; }
+.title em { font-style: normal; color: var(--red); }
 .tagline { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 /* ---------- 表单 ---------- */
 .form { display: flex; flex-direction: column; gap: 1.5rem; }
 .field { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; border: 0; min-width: 0; }
-.field > label, legend { font-size: var(--step-0); padding: 0; }
+.field > label, legend { font-family: var(--font-display); font-weight: 700; font-size: var(--step-0); padding: 0; }
 input[type="date"], input[type="time"], select {
   width: 100%;
-  min-height: 54px;
+  min-height: 52px;
   padding: 0.75rem 0.875rem;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: var(--surface);
-  color: var(--fg);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
-  font-family: var(--font-hud);
   font-size: var(--step-0);
   font-variant-numeric: tabular-nums;
-  accent-color: var(--magenta);
+  accent-color: var(--red);
 }
-input:focus-visible, select:focus-visible { outline: none; border-color: var(--cyan); box-shadow: var(--glow-cyan); }
-input:disabled { opacity: 0.4; }
+input:focus-visible, select:focus-visible { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+input:disabled, select:disabled { opacity: 0.45; }
 .check { display: flex; gap: 0.6rem; align-items: center; color: var(--muted); font-size: var(--step--1); padding-block: 0.4rem; cursor: pointer; }
-.check input { width: 1.15rem; height: 1.15rem; accent-color: var(--magenta); margin: 0; }
+.check input { width: 1.15rem; height: 1.15rem; accent-color: var(--red); margin: 0; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 .seg-item {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 54px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  min-height: 52px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
   font-family: var(--font-display);
   font-size: var(--step-1);
   cursor: pointer;
 }
 .seg-item input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.seg-item:has(input:checked) { border-color: var(--cyan); color: var(--cyan); box-shadow: var(--glow-cyan); text-shadow: var(--glow-cyan); }
-.form-error { color: var(--danger); font-size: var(--step--1); }
+.seg-item:has(input:checked) { border-color: var(--red); color: var(--red); background: var(--red-soft); font-weight: 700; }
+.form-error { color: var(--red); font-size: var(--step--1); }
 .tri { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 0.5rem; }
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .sub { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
-.sub label { font-family: var(--font-hud); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; }
+.sub label { font-size: 0.75rem; color: var(--muted); }
 .sub select { padding-inline: 0.6rem; }
-select:disabled { opacity: 0.45; }
-#lunar-preview { font-family: var(--font-hud); color: var(--cyan); }
+#lunar-preview { color: var(--green); }
 
-/* ---------- 解码终端 ---------- */
+/* ---------- 推算:打字机稿纸 ---------- */
 .terminal {
-  border: 1px solid color-mix(in oklab, var(--cyan) 55%, transparent);
-  background: color-mix(in oklab, var(--surface) 92%, transparent);
-  box-shadow: 0 0 30px color-mix(in oklab, var(--cyan) 12%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(90deg, transparent 2.2rem, color-mix(in oklab, var(--red) 45%, transparent) 2.2rem 2.3rem, transparent 2.3rem),
+    repeating-linear-gradient(var(--paper) 0 1.75rem, var(--line) 1.75rem calc(1.75rem + 1px)),
+    var(--paper);
+  box-shadow: 0 10px 24px -14px var(--shadow);
+  overflow: hidden;
 }
-.term-bar { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--font-hud); font-size: 0.75rem; }
-.term-bar i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--line); }
-.term-bar i:first-child { background: var(--magenta); }
-.term-bar i:nth-child(2) { background: var(--gold); }
-.term-bar i:nth-child(3) { background: var(--cyan); }
-.term-bar span { margin-left: auto; }
+.term-bar { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--line); background: var(--paper-2); color: var(--muted); font-size: var(--step--1); }
+.term-bar i { display: none; }
 .term-body {
   margin: 0;
-  min-height: 15.5rem;
-  padding: 0.9rem 0.9rem 1rem;
-  font-family: var(--font-hud);
-  font-size: 0.8125rem;
-  line-height: 1.8;
+  min-height: 16rem;
+  padding: 0.6rem 0.9rem 1rem 2.8rem;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  line-height: 1.75rem;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--cyan);
-  text-shadow: 0 0 6px color-mix(in oklab, var(--cyan) 45%, transparent);
+  color: var(--ink);
 }
-.term-body .done { color: var(--gold); text-shadow: 0 0 8px color-mix(in oklab, var(--gold) 60%, transparent); }
-.caret { display: inline-block; width: 0.55em; height: 1.1em; vertical-align: -0.2em; background: var(--magenta); animation: blink 1s steps(1) infinite; }
+.term-body .done { color: var(--red); font-weight: 700; }
+.caret { display: inline-block; width: 0.5em; height: 1.1em; vertical-align: -0.15em; background: var(--red); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-.progress { height: 4px; background: var(--surface-2); overflow: hidden; }
-.progress span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--magenta)); box-shadow: var(--glow-magenta); transition: width 0.2s linear; }
+.progress { height: 6px; background: var(--paper-2); border-radius: 3px; overflow: hidden; }
+.progress span { display: block; height: 100%; width: 0; background: var(--red); transition: width 0.2s linear; }
 
-/* ---------- 面板 ---------- */
+/* ---------- 纸卡面板 ---------- */
 .panel {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   min-width: 0;
-  padding: 1rem;
-  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 10px 24px -16px var(--shadow);
 }
-.panel-title { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; font-family: var(--font-hud); font-size: 0.75rem; color: var(--cyan); letter-spacing: 0.14em; }
-.panel-title b { color: var(--fg); font-weight: 600; letter-spacing: 0.04em; font-family: var(--font-body); font-size: var(--step--1); text-align: right; }
+.panel-title { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; font-size: var(--step--1); color: var(--red); letter-spacing: 0.16em; }
+.panel-title b { color: var(--ink); font-weight: 600; letter-spacing: 0.02em; font-size: var(--step--1); text-align: right; }
 
-.hud-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-family: var(--font-hud); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; }
-.hud-bar .lv { color: var(--gold); text-shadow: 0 0 8px color-mix(in oklab, var(--gold) 60%, transparent); font-size: var(--step-0); }
-
-/* ---------- 四柱符箓卡 ---------- */
+/* ---------- 四柱:竖排红纸条 ---------- */
 .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
 .talisman {
   position: relative;
@@ -312,79 +237,63 @@ select:disabled { opacity: 0.45; }
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
-  padding: 0.55rem 0.2rem 0.6rem;
-  border: 1px solid color-mix(in oklab, var(--cyan) 50%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--cyan) 12%, transparent), transparent 35%),
-    var(--surface-2);
-  box-shadow: inset 0 0 14px color-mix(in oklab, var(--cyan) 12%, transparent);
+  padding: 0 0.2rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--cream);
+  overflow: hidden;
 }
-.talisman.day {
-  border-color: var(--magenta);
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--magenta) 20%, transparent), transparent 40%),
-    var(--surface-2);
-  box-shadow: var(--glow-magenta), inset 0 0 14px color-mix(in oklab, var(--magenta) 18%, transparent);
-}
-.talisman .lbl { font-family: var(--font-hud); font-size: 0.6875rem; color: var(--muted); letter-spacing: 0.1em; }
-.talisman .ss { font-size: 0.6875rem; color: var(--cyan); min-height: 1.2em; }
-.talisman.day .ss { color: var(--magenta); font-weight: 700; }
-.talisman .gz { font-family: var(--font-display); font-size: 2.1rem; line-height: 1.15; font-weight: 700; text-shadow: 0 0 10px currentColor; }
-.talisman .rule { width: 60%; height: 1px; margin: 0.15rem 0; background: color-mix(in oklab, var(--fg) 20%, transparent); }
+.talisman .lbl { align-self: stretch; text-align: center; padding: 0.15rem 0; margin-bottom: 0.3rem; background: var(--paper-2); font-size: 0.6875rem; color: var(--muted); letter-spacing: 0.1em; }
+.talisman.day { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.talisman.day .lbl { background: var(--red); color: var(--cream); }
+.talisman .ss { font-size: 0.6875rem; color: var(--muted); min-height: 1.2em; }
+.talisman.day .ss { color: var(--red); font-weight: 700; }
+.talisman .gz { font-family: var(--font-display); font-size: 2.1rem; line-height: 1.15; font-weight: 700; }
+.talisman .rule { width: 50%; height: 1px; margin: 0.2rem 0; background: var(--line); }
 .talisman .hide { font-size: 0.6875rem; color: var(--muted); letter-spacing: 0.08em; min-height: 1.2em; }
 
 .el-木 { color: var(--wood); } .el-火 { color: var(--fire); } .el-土 { color: var(--earth); } .el-金 { color: var(--metal); } .el-水 { color: var(--water); }
 
-/* ---------- 内核 ---------- */
 .kernel { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; align-items: center; }
 .kernel-hex {
   grid-row: span 2;
-  width: 4.75rem;
-  height: 5.25rem;
+  width: 4.5rem;
+  height: 4.5rem;
   display: grid;
   place-items: center;
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: linear-gradient(135deg, var(--cyan), var(--magenta));
+  border: 2px solid var(--red);
+  border-radius: 12px;
+  background: var(--cream);
+  rotate: -4deg;
 }
-.kernel-hex span {
-  display: grid;
-  place-items: center;
-  width: calc(100% - 4px);
-  height: calc(100% - 4px);
-  clip-path: inherit;
-  background: var(--surface);
-  font-family: var(--font-display);
-  font-size: 2.25rem;
-  font-weight: 700;
-  text-shadow: 0 0 12px currentColor;
-}
-.kernel h3 { font-size: var(--step-2); line-height: 1.25; }
+.kernel-hex span { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; }
+.kernel h3 { font-size: var(--step-2); line-height: 1.3; }
 .kernel p { color: var(--muted); font-size: var(--step--1); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.15rem 0.6rem;
+  padding: 0.15rem 0.7rem;
   border: 1px solid var(--line);
+  border-radius: 999px;
   font-size: var(--step--1);
-  color: var(--fg);
-  background: color-mix(in oklab, var(--surface-2) 70%, transparent);
+  background: var(--cream);
 }
-.chip.cyan { border-color: var(--cyan); color: var(--cyan); }
-.chip.magenta { border-color: var(--magenta); color: var(--magenta); }
-.chip.gold { border-color: var(--gold); color: var(--gold); }
+.chip.cyan { border-color: var(--green); color: var(--green); }
+.chip.magenta { border-color: var(--red); color: var(--red); }
+.chip.gold { border-color: var(--amber); color: var(--earth); background: var(--amber-soft); }
 
 /* ---------- 五行雷达 ---------- */
 .radar-wrap { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }
 .radar { width: 100%; max-width: 19rem; height: auto; overflow: visible; }
 .radar .grid { fill: none; stroke: var(--line); stroke-width: 1; }
 .radar .spoke { stroke: var(--line); stroke-width: 1; }
-.radar .area { fill: color-mix(in oklab, var(--cyan) 22%, transparent); stroke: var(--cyan); stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 6px color-mix(in oklab, var(--cyan) 70%, transparent)); }
-.radar .dot { stroke: var(--surface); stroke-width: 2; }
+.radar .area { fill: color-mix(in oklab, var(--amber) 28%, transparent); stroke: var(--amber); stroke-width: 2; stroke-linejoin: round; }
+.radar .dot { stroke: var(--paper); stroke-width: 2; }
 .radar .glyph { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
 .radar .name { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
-.radar .val { font-family: var(--font-hud); font-size: 12px; fill: var(--fg); }
+.radar .val { font-size: 12px; fill: var(--ink); font-weight: 600; }
 .radar .fill-木 { fill: var(--wood); } .radar .fill-火 { fill: var(--fire); } .radar .fill-土 { fill: var(--earth); } .radar .fill-金 { fill: var(--metal); } .radar .fill-水 { fill: var(--water); }
 .radar-draw { transform-origin: center; transform-box: fill-box; animation: radar-in 0.9s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes radar-in { from { scale: 0.2; opacity: 0; } }
@@ -395,7 +304,7 @@ select:disabled { opacity: 0.45; }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 .split > * { min-width: 0; }
 
-.yun-scroll { overflow-x: auto; margin-inline: -1rem; padding-inline: 1rem; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.yun-scroll { overflow-x: auto; margin-inline: -1.1rem; padding-inline: 1.1rem; scrollbar-width: thin; }
 .yun { display: flex; gap: 0.5rem; width: max-content; margin: 0; padding: 0 0 0.25rem; }
 .yun li {
   list-style: none;
@@ -404,353 +313,306 @@ select:disabled { opacity: 0.45; }
   align-items: center;
   padding: 0.4rem 0.65rem;
   border: 1px solid var(--line);
-  background: var(--surface-2);
-  font-family: var(--font-hud);
+  border-radius: 8px;
+  background: var(--cream);
   font-size: 0.6875rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.yun li b { font-family: var(--font-display); font-size: var(--step-1); color: var(--fg); }
+.yun li b { font-family: var(--font-display); font-size: var(--step-1); color: var(--ink); }
 
-/* ---------- 人生阶段 ---------- */
-.exp { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
-.exp i { height: 6px; background: var(--surface-2); border: 1px solid var(--line); }
-.exp i.on { background: linear-gradient(90deg, var(--cyan), var(--magenta)); border-color: transparent; box-shadow: 0 0 8px color-mix(in oklab, var(--magenta) 50%, transparent); }
-.stage-head { display: flex; flex-direction: column; gap: 0.35rem; }
-.stage-ages {
-  font-family: var(--font-display);
-  font-size: var(--step-4);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  text-shadow: var(--glow-cyan);
+/* ---------- 一天的进度条 ---------- */
+.dayline { display: flex; flex-direction: column; gap: 0.35rem; }
+.dayline-top { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--step--1); color: var(--muted); }
+.dayline-top b { font-family: var(--font-display); font-size: var(--step-0); color: var(--ink); }
+.dayline-bar { position: relative; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+.dayline-bar i { height: 6px; border-radius: 2px; background: var(--line); }
+.dayline-bar i.on { background: var(--amber); }
+.dayline-bar i.now { background: var(--red); }
+.dayline-ends { display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--muted); }
+
+/* ---------- 场景:老照片 + 撕页日历 ---------- */
+.moment { position: relative; padding-top: 1.4rem; }
+.photo {
+  margin: 0;
+  padding: 8px 8px 10px;
+  background: #fffdf8;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px var(--shadow), 0 14px 26px -16px var(--shadow);
+  rotate: 0.6deg;
 }
-.stage-ages small { font-size: var(--step-1); margin-left: 0.25rem; color: var(--muted); text-shadow: none; }
+.scene-art { display: block; width: 100%; height: auto; aspect-ratio: 360 / 220; border-radius: 2px; }
+.calendar {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  z-index: 1;
+  width: 6.4rem;
+  border-radius: 6px;
+  background: var(--cream);
+  box-shadow: 0 6px 14px -8px var(--shadow);
+  text-align: center;
+  rotate: -3deg;
+  overflow: hidden;
+}
+.calendar .cal-head { display: block; padding: 0.15rem 0; background: var(--red); color: var(--cream); font-size: 0.75rem; letter-spacing: 0.12em; }
+.calendar .cal-num { display: block; font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; padding-top: 0.15rem; }
+.calendar .cal-sub { display: block; font-size: 0.6875rem; color: var(--muted); padding-bottom: 0.3rem; }
 .stage-name { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
 .stage-name h2 { font-size: var(--step-2); }
-.stage-name span { font-family: var(--font-hud); font-size: 0.75rem; color: var(--magenta); letter-spacing: 0.1em; }
+.stage-name span { font-size: var(--step--1); color: var(--muted); }
+
 .env {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.1rem 0.75rem;
   align-items: center;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid color-mix(in oklab, var(--gold) 45%, transparent);
-  background: color-mix(in oklab, var(--gold) 6%, var(--surface));
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--paper) 60%, transparent);
 }
-.env .tag { grid-row: span 2; font-family: var(--font-hud); font-size: 0.6875rem; color: var(--ink); background: var(--gold); padding: 0.1rem 0.35rem; letter-spacing: 0.08em; }
+.env .tag { grid-row: span 2; font-size: 0.6875rem; color: var(--cream); background: var(--green); padding: 0.1rem 0.4rem; border-radius: 4px; letter-spacing: 0.08em; }
 .env b { font-family: var(--font-display); font-size: var(--step-1); }
 .env span:last-child { color: var(--muted); font-size: var(--step--1); }
 
-.event-text { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.5; }
-.options { display: flex; flex-direction: column; gap: 0.8rem; }
+.event-text { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.6; }
+.options { display: flex; flex-direction: column; gap: 0.7rem; }
 .option {
   position: relative;
   display: grid;
-  grid-template-columns: 2.25rem 1fr;
-  gap: 0.85rem;
+  grid-template-columns: 2.1rem 1fr;
+  gap: 0.8rem;
   align-items: center;
   width: 100%;
-  min-height: 60px;
-  padding: 0.85rem 1rem;
-  border: 0;
-  background: var(--surface);
-  color: var(--fg);
+  min-height: 58px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
   font-size: var(--step-0);
+  line-height: 1.55;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.2s, translate 0.15s;
+  box-shadow: 0 6px 14px -12px var(--shadow);
+  transition: translate 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
-.option:hover { background: var(--surface-2); }
+.option:hover { translate: 0 -2px; border-color: var(--red); box-shadow: 0 10px 18px -12px var(--shadow); }
 .option:active { translate: 0 1px; }
 .option .mark {
-  width: 2.25rem;
-  height: 2.5rem;
+  width: 2.1rem;
+  height: 2.1rem;
   display: grid;
   place-items: center;
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: linear-gradient(135deg, var(--cyan), var(--magenta));
-  color: var(--ink);
+  border: 1.5px solid var(--red);
+  border-radius: 50%;
+  color: var(--red);
   font-family: var(--font-display);
   font-weight: 700;
+  rotate: -8deg;
 }
 .outcome {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  padding: 1rem;
-  border: 1px solid var(--magenta);
-  background: color-mix(in oklab, var(--magenta) 7%, var(--surface));
-  box-shadow: 0 0 26px color-mix(in oklab, var(--magenta) 20%, transparent);
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  background:
+    repeating-linear-gradient(var(--cream) 0 1.9rem, color-mix(in oklab, var(--line) 70%, transparent) 1.9rem calc(1.9rem + 1px)),
+    var(--cream);
+  box-shadow: 0 12px 24px -16px var(--shadow);
+  border: 1px solid var(--line);
 }
 .outcome .picked { color: var(--muted); font-size: var(--step--1); }
-.outcome .story { font-family: var(--font-display); font-size: var(--step-1); line-height: 1.6; }
+.outcome .story { font-family: var(--font-display); font-size: var(--step-1); line-height: 1.9rem; }
 .gain {
-  font-family: var(--font-hud);
+  padding: 0 0.5rem;
+  border: 1.5px solid var(--red);
+  border-radius: 4px;
+  color: var(--red);
+  font-family: var(--font-display);
   font-size: var(--step--1);
-  color: var(--gold);
-  border: 1px solid var(--gold);
-  padding: 0.15rem 0.55rem;
-  text-shadow: 0 0 8px color-mix(in oklab, var(--gold) 60%, transparent);
-  animation: float-up 0.7s cubic-bezier(.2,.7,.2,1) both;
+  font-weight: 700;
+  rotate: -4deg;
+  animation: stamp 0.35s cubic-bezier(.2,.9,.3,1.4) both;
 }
-.gain:nth-child(2) { animation-delay: 0.12s; }
-@keyframes float-up { from { opacity: 0; translate: 0 10px; } }
+.gain:nth-child(2) { animation-delay: 0.12s; rotate: 3deg; }
+@keyframes stamp { from { opacity: 0; scale: 1.6; } }
 
-/* ---------- 结果:角色卡 ---------- */
-/* 全息卡:思路参考 pokemon-cards-css 的"镭射 + 高光"分层做法,代码为自行实现 */
-@property --px { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
-@property --py { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
-.holo {
-  --rx: 0deg;
-  --ry: 0deg;
-  perspective: 900px;
-  filter: drop-shadow(0 0 22px color-mix(in oklab, var(--magenta) 30%, transparent));
-  animation: sweep 7s ease-in-out infinite alternate;
-  touch-action: pan-y;
-}
-.holo.live { animation: none; }
-@keyframes sweep {
-  from { --px: 10%; --py: 20%; }
-  to { --px: 90%; --py: 80%; }
-}
-.holo .share-card {
-  transform: rotateX(var(--rx)) rotateY(var(--ry));
-  transition: transform 0.25s ease-out;
-  --aug-tl: 22px;
-  --aug-br: 22px;
-  --aug-border-all: 2px;
-  --aug-border-bg: linear-gradient(135deg, var(--cyan), var(--magenta) 50%, var(--gold));
-}
-.foil, .glare { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-.foil {
-  background:
-    repeating-linear-gradient(115deg, #4ff0ff 0%, #ff4fd8 6%, #ffd36e 12%, #4ff0ff 18%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Cg stroke='%23fff' stroke-width='2'%3E%3Cpath d='M8 10h28M8 22h12m8 0h8M8 34h28'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 300% 300%, 44px 44px;
-  background-position: var(--px) var(--py), 0 0;
-  mix-blend-mode: color-dodge;
-  opacity: 0.16;
-}
-.glare {
-  background: radial-gradient(circle at var(--px) var(--py), rgb(255 255 255 / 0.32), transparent 45%);
-  mix-blend-mode: overlay;
-}
+/* ---------- 结果:人生纪念卡(明信片) ---------- */
 .share-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem 1.1rem 1.1rem;
+  gap: 0.9rem;
+  padding: 1.3rem 1.2rem 1.1rem;
+  border-radius: 6px;
   background:
-    radial-gradient(20rem 12rem at 100% 0, color-mix(in oklab, var(--magenta) 16%, transparent), transparent 70%),
-    radial-gradient(18rem 12rem at 0 100%, color-mix(in oklab, var(--cyan) 12%, transparent), transparent 70%),
-    var(--surface);
+    radial-gradient(18rem 10rem at 100% 0, color-mix(in oklab, var(--amber-soft) 80%, transparent), transparent 70%),
+    #fffdf7;
+  box-shadow: 0 1px 2px var(--shadow), 0 22px 40px -22px var(--shadow);
   overflow: hidden;
 }
-.result-title {
-  font-size: clamp(2rem, 9vw, 2.75rem);
-  line-height: 1.15;
-  padding-right: 4.5rem;
-  text-shadow: var(--glow-magenta);
-}
-.motto { font-family: var(--font-display); color: var(--cyan); font-size: var(--step-1); text-shadow: 0 0 8px color-mix(in oklab, var(--cyan) 40%, transparent); }
-.seal {
+.share-card::before {
+  content: "";
   position: absolute;
-  top: 1.1rem;
-  right: 1rem;
-  width: 3.6rem;
-  height: 3.6rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  place-items: center;
-  padding: 0.3rem;
-  border: 2px solid var(--magenta);
-  color: var(--magenta);
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 1;
-  rotate: -6deg;
-  text-shadow: var(--glow-magenta);
-  box-shadow: var(--glow-magenta), inset 0 0 10px color-mix(in oklab, var(--magenta) 30%, transparent);
+  inset: 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  pointer-events: none;
 }
-.axes { display: flex; flex-direction: column; gap: 0.65rem; }
+.share-card > * { position: relative; }
+.share-card .eyebrow { letter-spacing: 0.14em; }
+.result-title { font-size: clamp(2rem, 9vw, 2.6rem); line-height: 1.2; padding-right: 5.5rem; }
+.motto { font-family: var(--font-display); color: var(--green); font-size: var(--step-1); }
+.share-card > .stamp {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 4.2rem;
+  padding: 4px;
+  border: 4px dotted var(--bg);
+  outline: 1px solid var(--line);
+  background: var(--cream);
+  rotate: 4deg;
+}
+.stamp div { display: grid; place-items: center; gap: 0.15rem; aspect-ratio: 4 / 5; background: var(--red); color: var(--cream); font-family: var(--font-display); }
+.stamp b { font-size: 2rem; line-height: 1; }
+.stamp small { font-size: 0.5625rem; letter-spacing: 0.06em; }
+.postmark {
+  flex: none;
+  width: 4.4rem;
+  height: 4.4rem;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid color-mix(in oklab, var(--ink) 50%, transparent);
+  border-radius: 50%;
+  color: color-mix(in oklab, var(--ink) 60%, transparent);
+  font-size: 0.5625rem;
+  line-height: 1.35;
+  text-align: center;
+  rotate: -12deg;
+}
+.card-line { font-size: var(--step--1); color: var(--muted); }
+.card-line b { color: var(--ink); font-family: var(--font-display); font-size: var(--step-0); }
+.axes { display: flex; flex-direction: column; gap: 0.6rem; }
 .axis { display: grid; grid-template-columns: 2.5rem 1fr 2.5rem 2.4rem; gap: 0.5rem; align-items: center; font-size: var(--step--1); color: var(--muted); }
 .axis .l { text-align: right; }
-.axis .on { color: var(--fg); font-weight: 700; }
-.axis .track { position: relative; height: 8px; background: var(--surface-2); border: 1px solid var(--line); }
-.axis .track::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--muted); }
-.axis .fill { position: absolute; top: 0; bottom: 0; }
-.axis .fill.pos { background: linear-gradient(90deg, color-mix(in oklab, var(--cyan) 40%, transparent), var(--cyan)); box-shadow: 0 0 8px color-mix(in oklab, var(--cyan) 60%, transparent); }
-.axis .fill.neg { background: linear-gradient(270deg, color-mix(in oklab, var(--magenta) 40%, transparent), var(--magenta)); box-shadow: 0 0 8px color-mix(in oklab, var(--magenta) 60%, transparent); }
-.card-foot { display: flex; justify-content: space-between; gap: 0.75rem; font-family: var(--font-hud); font-size: 0.6875rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 0.75rem; letter-spacing: 0.06em; }
+.axis .on { color: var(--ink); font-weight: 700; }
+.axis .track { position: relative; height: 8px; background: var(--paper-2); border-radius: 4px; }
+.axis .track::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1.5px; background: var(--muted); }
+.axis .fill { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.axis .fill.pos { background: var(--green); }
+.axis .fill.neg { background: var(--red); }
+.axis .pct { font-size: 0.75rem; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.card-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 0.7rem; }
+.card-foot p { display: flex; flex-direction: column; gap: 0.2rem; }
+.card-foot b { font-family: var(--font-display); color: var(--ink); font-size: var(--step-0); }
 .shot-hint { text-align: center; color: var(--muted); font-size: var(--step--1); }
 
+/* ---------- 报告模块 ---------- */
 .traits { display: flex; flex-direction: column; gap: 0.9rem; }
 .trait { display: flex; flex-direction: column; gap: 0.2rem; }
-.trait b { font-family: var(--font-display); font-size: var(--step-1); color: var(--cyan); }
+.trait b { font-family: var(--font-display); font-size: var(--step-1); color: var(--red); }
 .trait p { color: var(--muted); font-size: var(--step--1); }
-.insight { font-family: var(--font-display); font-size: var(--step-1); line-height: 1.65; }
+.insight { font-family: var(--font-display); font-size: var(--step-1); line-height: 1.75; }
+.insight em { font-style: normal; color: var(--red); }
+
+.dial-wrap { display: grid; justify-items: center; }
+.dial-chart { width: 100%; max-width: 19rem; height: auto; overflow: visible; }
+.dial-chart .ring { fill: var(--cream); stroke: var(--line); stroke-width: 1.5; }
+.dial-chart .trail { fill: none; stroke: var(--line); stroke-width: 1; }
+.dial-chart .node { fill: var(--paper); stroke: var(--muted); stroke-width: 1.5; }
+.dial-chart .node.main { fill: var(--red); stroke: var(--cream); stroke-width: 2; }
+.dial-chart .tick { font-size: 11px; fill: var(--muted); }
+.dial-chart .center-big { font-family: var(--font-display); font-size: 26px; font-weight: 700; fill: var(--ink); }
+.dial-chart .center-small { font-size: 10px; fill: var(--muted); }
+
+.moments { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+.moments li { list-style: none; display: grid; grid-template-columns: 4.6rem 1fr; gap: 0.75rem; align-items: baseline; font-family: var(--font-display); font-size: var(--step-0); line-height: 1.6; }
+.moments .when { color: var(--red); font-size: var(--step-1); font-weight: 700; display: flex; flex-direction: column; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.moments .when small { font-size: 0.6875rem; color: var(--muted); font-weight: 400; font-family: var(--font-body); }
+
+.table-scroll { overflow-x: auto; }
+.rewrite { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
+.rewrite th, .rewrite td { padding: 0.5rem 0.4rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.rewrite thead th { font-size: 0.6875rem; color: var(--muted); font-weight: 400; letter-spacing: 0.08em; }
+.rewrite tbody th { font-weight: 400; color: var(--muted); white-space: nowrap; }
+.rewrite td small { display: block; color: var(--muted); font-size: 0.6875rem; }
+.verdict { display: inline-block; padding: 0 0.45rem; font-size: 0.75rem; border: 1.5px solid var(--line); border-radius: 4px; white-space: nowrap; font-family: var(--font-display); font-weight: 700; }
+.v-改写 { color: var(--red); border-color: var(--red); rotate: -4deg; }
+.v-顺写 { color: var(--green); border-color: var(--green); }
+.v-自由 { color: var(--muted); }
+
+.halves { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center; text-align: center; }
+.halves div { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.6rem; border-radius: 10px; background: var(--paper-2); }
+.halves b { font-family: var(--font-display); font-size: var(--step-2); }
+.halves div:first-child b { color: var(--amber); }
+.halves div:last-child b { color: var(--water); }
+.halves .arrow { color: var(--muted); font-size: var(--step-2); }
+
+.meter { height: 10px; background: var(--paper-2); border-radius: 5px; overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--green); border-radius: 5px; }
+.big { font-family: var(--font-display); font-size: var(--step-3); color: var(--ink); }
+
+.dots { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.dots li { list-style: none; position: relative; padding-left: 1rem; font-size: var(--step--1); line-height: 1.7; }
+.dots li::before { content: ""; position: absolute; left: 0; top: 0.7em; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+
 .locked ul { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
 .locked li { list-style: none; display: flex; gap: 0.6rem; align-items: baseline; color: var(--muted); font-size: var(--step--1); }
-.locked li::before { content: "LOCKED"; flex: none; font-family: var(--font-hud); font-size: 0.625rem; letter-spacing: 0.08em; padding: 0 0.3rem; color: var(--magenta); border: 1px solid color-mix(in oklab, var(--magenta) 60%, transparent); }
-.locked .note { color: var(--gold); font-size: var(--step--1); }
+.locked li::before { content: "未拆封"; flex: none; font-size: 0.625rem; padding: 0 0.3rem; color: var(--red); border: 1px solid var(--red); border-radius: 3px; }
+.locked .note { color: var(--green); font-size: var(--step--1); }
+.method summary { cursor: pointer; font-size: var(--step--1); letter-spacing: 0.12em; color: var(--red); }
+.method[open] summary { margin-bottom: 0.5rem; }
 
 /* ---------- 动效 ---------- */
 .reveal { animation: rise 0.45s cubic-bezier(.2,.7,.2,1) both; }
-.reveal:nth-child(2) { animation-delay: 0.05s; }
-.reveal:nth-child(3) { animation-delay: 0.1s; }
-.reveal:nth-child(4) { animation-delay: 0.15s; }
+.options .reveal:nth-child(2) { animation-delay: 0.05s; }
+.options .reveal:nth-child(3) { animation-delay: 0.1s; }
+.options .reveal:nth-child(4) { animation-delay: 0.15s; }
 @keyframes rise { from { opacity: 0; translate: 0 8px; } }
 
 ::view-transition-old(root) { animation: 0.18s ease-in both fade-out; }
-::view-transition-new(root) { animation: 0.32s cubic-bezier(.2,.7,.2,1) both fade-in; }
+::view-transition-new(root) { animation: 0.35s cubic-bezier(.2,.7,.2,1) both fade-in; }
 @keyframes fade-out { to { opacity: 0; } }
 @keyframes fade-in { from { opacity: 0; translate: 0 10px; } }
 
+/* ---------- 场景画面细节 ---------- */
+.scene-art .ground { fill: var(--sc-ground); }
+.scene-art .edge { fill: none; stroke: var(--sc-edge); stroke-width: 1.2; }
+.scene-art .sil { fill: var(--sc-sil); stroke: var(--sc-edge); stroke-width: 1; }
+.scene-art .sil.far { fill: var(--sc-far); }
+.scene-art .roof { fill: var(--sc-roof); stroke: var(--sc-edge); stroke-width: 1; }
+.scene-art .win { fill: var(--sc-win); }
+.scene-art .win.on { fill: #f2b84b; }
+.scene-art .lamp { fill: #f6c35b; }
+.scene-art .awning { fill: #b83d2c; }
+.scene-art .awning-2 { fill: #fff3e2; }
+.scene-art .wall { fill: var(--sc-wall); }
+.scene-art .tile { stroke: var(--sc-edge); stroke-width: 1; fill: none; opacity: 0.35; }
+.scene-art .dash { stroke: var(--sc-edge); stroke-dasharray: 14 10; fill: none; opacity: 0.6; }
+.scene-art .stars circle { fill: #fff6d8; animation: twinkle 3s ease-in-out infinite; animation-delay: var(--d); }
+.scene-art .rain line { stroke: #8fb1c9; stroke-width: 1.2; opacity: 0.7; animation: rain 0.9s linear infinite; animation-delay: var(--d); }
+.scene-art .sticker { fill: #fffdf6; filter: drop-shadow(0 3px 4px rgb(92 62 30 / 0.3)); }
+.scene-art .prop { fill: none; stroke: #3b2f25; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.scene-art .prop-wrap { animation: bob 3.4s ease-in-out infinite; }
+.scene-art .steam { fill: none; stroke: #fffaf0; stroke-width: 3; stroke-linecap: round; opacity: 0.85; animation: steam 2.6s ease-in-out infinite; }
+.scene-art .steam:nth-of-type(2) { animation-delay: 0.7s; }
+.scene-art .steam:nth-of-type(3) { animation-delay: 1.3s; }
+@keyframes twinkle { 50% { opacity: 0.3; } }
+@keyframes rain { to { translate: -6px 22px; } }
+@keyframes bob { 50% { translate: 0 -3px; } }
+
 @media (prefers-reduced-motion: reduce) {
-  .ring-outer, .ring-inner, .caret, .reveal, .title, .gain, .holo, .radar-draw { animation: none; }
+  .clock .hand, .clock .steam, .caret, .reveal, .gain, .radar-draw,
+  .scene-art .steam, .scene-art .rain line, .scene-art .stars circle, .scene-art .prop-wrap { animation: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .btn, .option { transition: none; }
 }
 
 @media (min-width: 30rem) {
   .title { font-size: 3.75rem; }
-}
-
-/* ---------- augmented-ui 切角外框(BSD-2-Clause,随包打包) ---------- */
-[data-augmented-ui] {
-  --aug-tl: 12px;
-  --aug-br: 12px;
-  --aug-tr: 12px;
-  --aug-bl: 12px;
-  --aug-border-all: 1px;
-  --aug-border-bg: var(--line);
-}
-.btn[data-augmented-ui] { border: 0; }
-.btn.primary[data-augmented-ui] { --aug-tl: 14px; --aug-br: 14px; --aug-border-all: 0px; }
-/* 切角会裁掉 outline,键盘焦点改用加粗的金色边框表示 */
-.btn[data-augmented-ui]:focus-visible, .option[data-augmented-ui]:focus-visible { outline: none; --aug-border-all: 2px; --aug-border-bg: var(--gold); }
-.btn:not(.primary)[data-augmented-ui] { --aug-border-bg: linear-gradient(100deg, var(--cyan), var(--magenta)); }
-.panel[data-augmented-ui] { --aug-tl: 14px; --aug-br: 14px; --aug-border-bg: linear-gradient(135deg, var(--cyan), var(--line) 28%, var(--line) 72%, var(--magenta)); }
-.option[data-augmented-ui] { --aug-border-bg: linear-gradient(100deg, var(--cyan), var(--magenta)); }
-.talisman[data-augmented-ui] { border: 0; --aug-tl: 8px; --aug-br: 8px; --aug-border-bg: color-mix(in oklab, var(--cyan) 60%, transparent); }
-.talisman.day[data-augmented-ui] { --aug-border-all: 1.5px; --aug-border-bg: var(--magenta); }
-.terminal[data-augmented-ui] { border: 0; --aug-tr: 14px; --aug-bl: 14px; --aug-border-bg: color-mix(in oklab, var(--cyan) 60%, transparent); }
-.env[data-augmented-ui] { border: 0; --aug-tl: 10px; --aug-border-bg: color-mix(in oklab, var(--gold) 55%, transparent); }
-.outcome[data-augmented-ui] { border: 0; --aug-border-all: 1.5px; --aug-border-bg: var(--magenta); }
-.yun li[data-augmented-ui] { border: 0; --aug-tl: 6px; --aug-br: 6px; }
-input[type="date"], input[type="time"], select { border-radius: 0; }
-
-/* 胶片噪点:内联 SVG 噪声,不加载外部资源 */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.07;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* ---------- 场景画面 ---------- */
-.scene { position: relative; margin: 0; --aug-tl: 18px; --aug-br: 18px; --aug-border-all: 1.5px; --aug-border-bg: linear-gradient(135deg, var(--cyan), var(--magenta)); }
-.scene-art { display: block; width: 100%; height: auto; aspect-ratio: 360 / 220; }
-.scene-art .ground { fill: #0d0820; }
-.scene-art .edge { fill: none; stroke: color-mix(in oklab, var(--cyan) 65%, transparent); stroke-width: 1; }
-.scene-art .sil { fill: #150c2e; stroke: color-mix(in oklab, var(--cyan) 40%, transparent); stroke-width: 1; }
-.scene-art .sil.far { fill: #1d1240; opacity: 0.85; }
-.scene-art .win { fill: #2b1e5a; }
-.scene-art .win.on { fill: var(--gold); opacity: 0.85; }
-.scene-art .lamp { fill: var(--gold); filter: drop-shadow(0 0 4px var(--gold)); }
-.scene-art .flag { fill: color-mix(in oklab, var(--magenta) 80%, transparent); }
-.scene-art .dash { stroke: color-mix(in oklab, var(--cyan) 50%, transparent); stroke-dasharray: 14 10; fill: none; }
-.scene-art .ridge { fill: none; stroke: var(--cyan); stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--cyan)); }
-.scene-art .stars circle { fill: #fff; animation: twinkle 3s ease-in-out infinite; animation-delay: var(--d); }
-.scene-art .rain line { stroke: #a9d8ff; stroke-width: 1; opacity: 0.55; animation: rain 0.8s linear infinite; animation-delay: var(--d); }
-.scene-art .prop {
-  fill: none;
-  stroke: var(--gold);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 4px color-mix(in oklab, var(--gold) 80%, transparent));
-}
-.scene-art .prop-wrap { animation: bob 3.2s ease-in-out infinite; }
-@keyframes twinkle { 50% { opacity: 0.25; } }
-@keyframes rain { to { translate: -8px 24px; } }
-@keyframes bob { 50% { translate: 0 -4px; } }
-.scene-hud {
-  position: absolute;
-  inset: 0.6rem 0.8rem auto;
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  pointer-events: none;
-  font-family: var(--font-hud);
-}
-.scene-hud .clock { font-size: var(--step-3); line-height: 1; color: #fff; text-shadow: 0 0 10px var(--magenta), 0 0 2px #000; font-variant-numeric: tabular-nums; }
-.scene-hud .sc { font-family: var(--font-display); font-size: var(--step-1); color: var(--gold); text-shadow: 0 0 6px #000; }
-.scene-hud .age { margin-left: auto; padding: 0.1rem 0.45rem; font-size: 0.75rem; color: var(--ink); background: var(--cyan); }
-
-@media (prefers-reduced-motion: reduce) {
-  .scene-art .stars circle, .scene-art .rain line, .scene-art .prop-wrap { animation: none; }
-}
-
-/* ---------- 报告模块 ---------- */
-.share-card > *:not(.foil, .glare, .seal) { position: relative; z-index: 1; }
-.share-card .seal { position: absolute; z-index: 1; }
-.card-line { font-size: var(--step--1); color: var(--muted); }
-.card-line b { color: var(--fg); font-family: var(--font-display); font-size: var(--step-0); }
-.axis .pct { font-family: var(--font-hud); font-size: 0.75rem; color: var(--fg); text-align: right; font-variant-numeric: tabular-nums; }
-.insight em { font-style: normal; color: var(--gold); text-shadow: 0 0 8px color-mix(in oklab, var(--gold) 50%, transparent); }
-
-.dial-wrap { display: grid; justify-items: center; }
-.dial-chart { width: 100%; max-width: 19rem; height: auto; overflow: visible; }
-.dial-chart .ring { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 6; }
-.dial-chart .trail { fill: none; stroke: color-mix(in oklab, var(--cyan) 35%, transparent); stroke-width: 1; }
-.dial-chart .node { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1.5; }
-.dial-chart .node.main { fill: var(--gold); stroke: var(--surface); stroke-width: 2; filter: drop-shadow(0 0 5px var(--gold)); }
-.dial-chart .tick { font-family: var(--font-hud); font-size: 11px; fill: var(--muted); }
-.dial-chart .center-big { font-family: var(--font-display); font-size: 26px; font-weight: 700; fill: var(--fg); }
-.dial-chart .center-small { font-family: var(--font-hud); font-size: 10px; fill: var(--muted); }
-
-.moments { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-.moments li { list-style: none; display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.75rem; align-items: baseline; font-family: var(--font-display); font-size: var(--step-0); line-height: 1.5; }
-.moments .when { font-family: var(--font-hud); color: var(--gold); font-size: var(--step-1); display: flex; flex-direction: column; line-height: 1.2; }
-.moments .when small { font-size: 0.6875rem; color: var(--muted); }
-
-.table-scroll { overflow-x: auto; }
-.rewrite { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
-.rewrite th, .rewrite td { padding: 0.5rem 0.4rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
-.rewrite thead th { font-family: var(--font-hud); font-size: 0.6875rem; color: var(--muted); font-weight: 400; letter-spacing: 0.08em; }
-.rewrite tbody th { font-weight: 400; color: var(--muted); white-space: nowrap; }
-.rewrite td small { display: block; color: var(--muted); font-size: 0.6875rem; }
-.verdict { display: inline-block; padding: 0 0.4rem; font-size: 0.75rem; border: 1px solid var(--line); white-space: nowrap; }
-.v-改写 { color: var(--magenta); border-color: var(--magenta); }
-.v-顺写 { color: var(--cyan); border-color: var(--cyan); }
-.v-自由 { color: var(--muted); }
-
-.halves { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center; text-align: center; }
-.halves div { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.6rem; background: var(--surface-2); }
-.halves b { font-family: var(--font-display); font-size: var(--step-2); }
-.halves div:first-child b { color: var(--cyan); }
-.halves div:last-child b { color: var(--magenta); }
-.halves .arrow { color: var(--gold); font-size: var(--step-2); }
-
-.meter { height: 10px; background: var(--surface-2); border: 1px solid var(--line); }
-.meter span { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--magenta)); box-shadow: var(--glow-magenta); }
-.big { font-family: var(--font-hud); font-size: var(--step-3); color: var(--fg); }
-
-.dots { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-.dots li { list-style: none; position: relative; padding-left: 1rem; font-size: var(--step--1); line-height: 1.6; }
-.dots li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 6px; height: 6px; background: var(--cyan); rotate: 45deg; }
-
-.method summary { cursor: pointer; font-family: var(--font-hud); font-size: 0.75rem; letter-spacing: 0.12em; color: var(--cyan); }
-.method[open] summary { margin-bottom: 0.5rem; }
-
-@media (prefers-reduced-motion: reduce) {
-  .holo { animation: none; }
-  .holo .share-card { transition: none; }
 }

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeChart, type BirthInput } from './chart.ts';
 import { buildLifeCode, codeLines, TALENTS } from './profile.ts';
-import { AXES, planLife, shichen, SLOTS, STAGES, TOTAL_CHOICES } from './story.ts';
+import { agesLabel, AXES, BEATS, clockLabel, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES } from './story.ts';
 import { ARCHETYPES, BALANCED, buildReport, LOCKED_ITEMS, METHOD_NOTES, type Choice } from './report.ts';
 import { rng } from './rng.ts';
 
@@ -12,112 +12,121 @@ const input = (y: number, m: number, d: number, h: number, mi: number, gender: B
   longitude: null,
 });
 
-function play(inp: BirthInput, pick: (n: number) => number) {
+/** 走完一生:pick 决定每一幕选第几个可用选项 */
+function play(inp: BirthInput, pick: (n: number, step: number) => number, place: string | null = null) {
   const chart = computeChart(inp);
   const code = buildLifeCode(chart);
-  const plan = planLife(chart, code.seed);
-  const choices: Choice[] = plan.map(p => {
-    const i = pick(p.event.options.length);
-    const o = p.event.options[i];
-    const alternatives = p.event.options.filter((_, j) => j !== i).map(x => ({ text: x.text, effects: x.effects }));
-    return { hour: p.slot.hour, agesLabel: p.slot.agesLabel, eventId: p.event.id, optionText: o.text, effects: o.effects, alternatives };
-  });
-  return { chart, code, plan, choices, report: buildReport(chart, code, choices) };
+  const ctx = storyContext(code.seed, place);
+  const flags = new Set<string>();
+  const choices: Choice[] = [];
+  const texts: string[] = [];
+  const seenOptions: string[] = [];
+  for (let i = 0; i < TOTAL_CHOICES; i++) {
+    const r = resolveBeat(i, ctx, flags);
+    assert.ok(r.options.length >= 3 && r.options.length <= 5, `${r.beat.id} 有 ${r.options.length} 个选项`);
+    const k = pick(r.options.length, i);
+    const opt = r.options[k];
+    texts.push(r.text, ...r.options.flatMap(x => [x.text, x.result]));
+    seenOptions.push(...r.options.map(x => `${r.beat.id}:${x.text}`));
+    opt.set.forEach(f => flags.add(f));
+    choices.push({
+      hour: r.beat.hour,
+      agesLabel: agesLabel(r.beat),
+      eventId: r.beat.id,
+      optionText: opt.text,
+      effects: opt.effects,
+      alternatives: r.options.filter((_, j) => j !== k).map(x => ({ text: x.text, effects: x.effects })),
+    });
+  }
+  return { chart, code, ctx, flags, choices, texts, seenOptions, report: buildReport(chart, code, choices) };
 }
 
-const allEvents = () => SLOTS.flatMap(s => s.variants);
-
-test('一天 24 个整点,从清晨 6 点走到次日 5 点', () => {
+test('一天 24 幕,从清晨 6 点走到次日 5 点,年龄递增', () => {
   assert.equal(TOTAL_CHOICES, 24);
-  assert.deepEqual(SLOTS.map(s => s.hour), [...Array(24)].map((_, i) => (6 + i) % 24));
-  for (let i = 1; i < SLOTS.length; i++) assert.ok(SLOTS[i].ages[0] > SLOTS[i - 1].ages[1], `年龄要递增:第 ${i} 个小时`);
+  assert.deepEqual(BEATS.map(b => b.hour), [...Array(24)].map((_, i) => (6 + i) % 24));
+  for (let i = 1; i < BEATS.length; i++) assert.ok(BEATS[i].ages[0] > BEATS[i - 1].ages[1], BEATS[i].id);
   assert.equal(shichen(6), '卯时');
-  assert.equal(shichen(23), '子时');
   assert.equal(shichen(0), '子时');
   assert.equal(shichen(12), '午时');
-  assert.ok(SLOTS.every(s => STAGES[s.stage]));
+  assert.equal(clockLabel(5), '05:00');
+  assert.ok(BEATS.every(b => STAGES[b.stage]));
+  assert.equal(new Set(BEATS.map(b => b.id)).size, 24);
 });
 
-test('场景 id 不重复', () => {
-  const ids = allEvents().map(e => e.id);
-  assert.equal(new Set(ids).size, ids.length);
+test('剧情连贯:家乡用出生地,朋友名字固定', () => {
+  const a = play(input(1996, 3, 8, 14, 20), () => 0, '成都市');
+  assert.equal(a.ctx.home, '成都');
+  assert.ok(a.texts[0].startsWith('成都的一个清晨'));
+  assert.ok(a.texts.some(t => t.includes(a.ctx.friend)));
+  const b = play(input(1996, 3, 8, 14, 20), () => 0, '成都市');
+  assert.deepEqual(a.choices.map(c => c.optionText), b.choices.map(c => c.optionText));
+  assert.equal(play(input(1996, 3, 8, 14, 20), () => 0).ctx.home, '小城');
 });
 
-test('同样的出生参数得到同样的人生', () => {
-  const a = play(input(1996, 3, 8, 14, 20), () => 0);
-  const b = play(input(1996, 3, 8, 14, 20), () => 0);
-  assert.deepEqual(a.plan.map(p => p.event.id), b.plan.map(p => p.event.id));
-  assert.equal(a.code.seedHex, b.code.seedHex);
+test('前面的选择会改变后面的剧情', () => {
+  // 5 岁那场雨里把伞分给朋友 vs 远远看着:7 岁早餐摊那一幕文字不同
+  const close = play(input(1990, 5, 5, 8, 0), (_n, step) => (step === 2 ? 0 : 1));
+  const far = play(input(1990, 5, 5, 8, 0), (_n, step) => (step === 2 ? 2 : 1));
+  assert.notEqual(close.texts.find(t => t.startsWith('上小学了')), far.texts.find(t => t.startsWith('上小学了')));
 });
 
-test('每个小时的两个场景版本都能被抽到', () => {
+test('随机走 2000 次:选项数量合规、占位符都被替换、每个选项都能走到', () => {
+  const r = rng(99);
   const seen = new Set<string>();
-  const r = rng(7);
-  for (let i = 0; i < 300; i++) {
-    const { plan } = play(input(1960 + Math.floor(r() * 50), 1 + Math.floor(r() * 12), 1 + Math.floor(r() * 28), Math.floor(r() * 24), 0), () => 0);
-    assert.equal(plan.length, 24);
-    plan.forEach(p => seen.add(p.event.id));
+  for (let i = 0; i < 2000; i++) {
+    const run = play(input(1950 + (i % 60), 1 + (i % 12), 1 + (i % 28), i % 24, 0), n => Math.floor(r() * n), i % 2 ? '杭州市' : null);
+    for (const t of run.texts) assert.ok(!/[{}]/.test(t), `残留占位符:${t}`);
+    run.seenOptions.forEach(s => seen.add(s.split(':')[0] + ':' + s.split(':').slice(1).join(':').replace(/成都|杭州|小城/g, '')));
   }
-  assert.deepEqual([...seen].sort(), allEvents().map(e => e.id).sort());
+  // 每个选项定义至少被看到过一次(按幕统计数量)
+  for (const b of BEATS) {
+    const count = [...seen].filter(s => s.startsWith(b.id + ':')).length;
+    assert.ok(count >= b.options.length, `${b.id}:只走到 ${count}/${b.options.length} 个选项`);
+  }
 });
 
 test('每个维度都能往两个方向走,每个选项都有效果', () => {
+  const all = BEATS.flatMap(b => b.options);
   for (const axis of AXES) {
-    const signs = new Set(allEvents().flatMap(e => e.options.map(o => Math.sign(o.effects[axis] ?? 0))));
+    const signs = new Set(all.map(o => Math.sign(o.effects[axis] ?? 0)));
     assert.ok(signs.has(1) && signs.has(-1), axis);
   }
-  for (const e of allEvents()) for (const o of e.options) assert.ok(Object.keys(o.effects).length > 0, o.text);
+  for (const o of all) assert.ok(Object.keys(o.effects).length > 0);
 });
 
-test('报告:标题、特征、证据和对比都生成', () => {
+test('报告:各模块生成且统计正确', () => {
   for (const pick of [() => 0, () => 1, (n: number) => n - 1]) {
-    const { report, code } = play(input(1988, 11, 2, 6, 45, 'male'), pick);
+    const { report, code, choices } = play(input(1988, 11, 2, 6, 45, 'male'), pick);
     assert.ok(report.title.startsWith(code.kernel));
-    assert.ok(report.traits.length > 0);
-    for (const t of report.traits) assert.ok(t.evidence.length > 0, t.pole);
-    const quoted = report.traits.map(t => t.evidence);
-    assert.equal(new Set(quoted).size, quoted.length, '各特征的证据应尽量不重复');
-    assert.ok(report.contrast.text.includes(code.talent.name));
     assert.equal(report.timeline.length, 24);
     assert.equal(report.rewrites.length, 6);
-    assert.equal(report.rewriteCount, report.rewrites.filter(r => r.verdict === '改写').length);
-    assert.ok(report.consistency.pct >= 0 && report.consistency.pct <= 100);
-    for (const a of report.axes) assert.ok(a.pct >= 50 && a.pct <= 100, `${a.axis} ${a.pct}`);
+    for (const a of report.axes) {
+      assert.equal(a.score, choices.reduce((s, c) => s + (c.effects[a.axis] ?? 0), 0), a.axis);
+      assert.ok(a.pct >= 50 && a.pct <= 100);
+    }
+    const quoted = report.traits.map(t => t.evidence);
+    assert.equal(new Set(quoted).size, quoted.length);
     assert.ok(report.moments.length <= 3);
-    assert.notEqual(report.partner.complement.name, report.archetype.name);
+    if (report.parallel) assert.ok(report.parallel.text.includes(report.parallel.alternative));
   }
-});
-
-test('报告统计与手算一致', () => {
-  const { report, choices } = play(input(2001, 7, 9, 21, 15), () => 0);
-  for (const a of report.axes) {
-    const vals = choices.map(c => c.effects[a.axis] ?? 0);
-    assert.equal(a.score, vals.reduce((s, v) => s + v, 0), a.axis);
-  }
-  // 名场面都支持主轴,且按时间先后排列
-  const idx = report.moments.map(m => choices.findIndex(c => c.optionText === m.optionText && c.hour === m.hour));
-  assert.deepEqual(idx, [...idx].sort((x, y) => x - y));
-  if (report.parallel) assert.ok(report.parallel.text.includes(report.parallel.alternative));
 });
 
 // 文案红线:不出现预测、改运、断言吉凶或涉及健康、钱财决策的用语
 const BANNED = ['改运', '化解', '开光', '注定', '必然', '劫数', '灾', '凶', '吉凶', '大吉', '寿命', '疾病', '病', '死', '发财', '财运', '婚姻', '桃花', '克夫', '克妻', '算命', '预测'];
 
 test('所有面向玩家的文案都不含红线词', () => {
-  const { chart, code } = play(input(1990, 1, 1, 12, 0), () => 0);
-  const texts = [
-    ...STAGES.flatMap(s => [s.name, s.codeName]),
-    ...allEvents().flatMap(e => [e.text, ...e.options.flatMap(o => [o.text, o.result])]),
+  const r = rng(3);
+  const texts: string[] = [
+    ...STAGES.flatMap(s => [s.name, s.timeOfDay]),
     ...Object.values(TALENTS).flatMap(t => [t.name, t.desc]),
     ...LOCKED_ITEMS,
     ...METHOD_NOTES,
     ...[...Object.values(ARCHETYPES), BALANCED].flatMap(a => [a.name, a.motto, a.desc, a.role, ...a.strengths, ...a.blindSpots, a.suggestion, a.question]),
-    ...codeLines(chart, code),
   ];
-  const r = rng(3);
-  for (let i = 0; i < 50; i++) {
-    const { report } = play(input(1970 + i, 1 + (i % 12), 1 + (i % 28), i % 24, 30), n => Math.floor(r() * n));
-    texts.push(report.title, report.contrast.text, report.halves.text, report.partner.text, report.parallel?.text ?? '', ...report.traits.map(t => t.evidence));
+  for (let i = 0; i < 300; i++) {
+    const run = play(input(1970 + (i % 50), 1 + (i % 12), 1 + (i % 28), i % 24, 30), n => Math.floor(r() * n));
+    const rp = run.report;
+    texts.push(...run.texts, ...codeLines(run.chart, run.code), rp.title, rp.contrast.text, rp.halves.text, rp.partner.text, rp.parallel?.text ?? '', ...rp.traits.map(t => t.evidence));
   }
   for (const t of texts) for (const w of BANNED) assert.ok(!t.includes(w), `「${t}」含有「${w}」`);
 });

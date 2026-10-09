@@ -2,10 +2,12 @@
 // 存在浏览器的 localStorage 里,不上传;读写失败(隐私模式等)时静默忽略。
 import type { BirthInput } from './engine/chart.ts';
 
-const KEY = 'life-code.save.v1';
+const KEY = 'life-code.save.v2';
 
 export interface Save {
   input: BirthInput;
+  /** 出生城市名,用作剧情里的家乡;没填为 null */
+  place: string | null;
   picks: number[];
 }
 
@@ -27,6 +29,7 @@ export function loadSave(): Save | null {
       t && [t.year, t.month, t.day, t.hour, t.minute].every(Number.isInteger) &&
       (s.input.gender === 'male' || s.input.gender === 'female') &&
       (s.input.longitude === null || typeof s.input.longitude === 'number') &&
+      (s.place === null || typeof s.place === 'string') &&
       Array.isArray(s.picks) && s.picks.every(Number.isInteger);
     return ok ? s : null;
   } catch {
