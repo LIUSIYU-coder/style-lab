@@ -2,7 +2,7 @@
 // 只描述游戏中的选择倾向；建议只给低风险的小行动；不涉及吉凶、财运、婚恋、健康。
 import type { Chart, Family } from './chart.ts';
 import type { LifeCode } from './profile.ts';
-import { AXES, AXIS_POLES, clockLabel, type Axis, type Effects } from './story.ts';
+import { agesLabel, AXES, AXIS_POLES, clockLabel, type Axis, type Effects, type ResolvedBeat, type ResolvedOption } from './story.ts';
 
 export interface Choice {
   hour: number;
@@ -24,6 +24,18 @@ export interface Archetype {
   blindSpots: [string, string];
   suggestion: string;
   question: string;
+}
+
+/** 把剧情里的一次选择记成报告用的 Choice */
+export function choiceOf(r: ResolvedBeat, opt: ResolvedOption): Choice {
+  return {
+    hour: r.beat.hour,
+    agesLabel: agesLabel(r.beat),
+    eventId: r.beat.id,
+    optionText: opt.text,
+    effects: opt.effects,
+    alternatives: r.options.filter(o => o !== opt).map(o => ({ text: o.text, effects: o.effects })),
+  };
 }
 
 const A = (

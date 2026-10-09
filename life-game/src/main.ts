@@ -6,7 +6,8 @@ import { buildLifeCode, codeLines, type LifeCode } from './engine/profile.ts';
 import { agesLabel, AXES, AXIS_POLES, clockLabel, environmentFor, replayStory, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, type Effects, type ResolvedBeat, type StoryContext } from './engine/story.ts';
 import { sceneSvg } from './scene.ts';
 import { clearSave, loadSave, writeSave } from './save.ts';
-import { buildReport, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
+import { MAX_YEAR, MIN_YEAR } from './engine/validate.ts';
+import { buildReport, choiceOf, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
 
 type ScreenId = 'intro' | 'form' | 'decode' | 'code' | 'stage' | 'result';
 
@@ -28,8 +29,6 @@ let game: Game | null = null;
 let typingTimer = 0;
 
 const OPTION_MARKS = ['甲', '乙', '丙', '丁', '戊'];
-const MIN_YEAR = 1920;
-const MAX_YEAR = 2026;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -335,14 +334,7 @@ function record(g: Game, r: ResolvedBeat, i: number) {
   const opt = r.options[i];
   opt.set.forEach(f => g.flags.add(f));
   g.picks.push(opt.key);
-  g.choices.push({
-    hour: r.beat.hour,
-    agesLabel: agesLabel(r.beat),
-    eventId: r.beat.id,
-    optionText: opt.text,
-    effects: opt.effects,
-    alternatives: r.options.filter((_, j) => j !== i).map(o => ({ text: o.text, effects: o.effects })),
-  });
+  g.choices.push(choiceOf(r, opt));
 }
 
 function effectChips(effects: Effects): string {

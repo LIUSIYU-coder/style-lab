@@ -7,8 +7,10 @@
     "dev": "vite --host",
     "build": "vite build && node scripts/inline.mjs",
     "preview": "vite preview --host",
-    "test": "node --test src/engine/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node --test src/engine/*.test.ts server/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "start": "node server/main.ts",
+    "codes": "node scripts/codes.ts"
   },
   "dependencies": {
     "lunar-typescript": "^1.8.6"
