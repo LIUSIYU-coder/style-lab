@@ -3,7 +3,7 @@ import { computeChart, type BirthInput, type Chart, type Gender } from './engine
 import { lunarDayName, lunarMonths, lunarToSolar, lunarYearLabel, solarToLunar } from './engine/calendar.ts';
 import { PROVINCES } from './engine/regions.ts';
 import { buildLifeCode, codeLines, type LifeCode } from './engine/profile.ts';
-import { agesLabel, AXES, AXIS_POLES, clockLabel, environmentFor, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, type Effects, type ResolvedBeat, type StoryContext } from './engine/story.ts';
+import { agesLabel, AXES, AXIS_POLES, clockLabel, environmentFor, replayStory, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, type Effects, type ResolvedBeat, type StoryContext } from './engine/story.ts';
 import { sceneSvg } from './scene.ts';
 import { clearSave, loadSave, writeSave } from './save.ts';
 import { buildReport, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
@@ -20,8 +20,8 @@ interface Game {
   /** 剧情状态:前面的选择留下的标记 */
   flags: Set<string>;
   choices: Choice[];
-  /** 每一步选的是第几个选项，用于存档 */
-  picks: number[];
+  /** 每一步所选选项的编号，用于存档和兑换深度解析 */
+  picks: string[];
 }
 
 let game: Game | null = null;
@@ -318,16 +318,12 @@ function renderCode() {
 
 /* ---------------- 人生 24 小时 ---------------- */
 
-function newGame(input: BirthInput, place: string | null, picks: number[] = []): Game {
+function newGame(input: BirthInput, place: string | null, picks: string[] = []): Game {
   const chart = computeChart(input);
   const code = buildLifeCode(chart);
-  const g: Game = { input, place, chart, code, ctx: storyContext(code.seed, place), flags: new Set(), choices: [], picks: [] };
-  for (const i of picks) {
-    if (g.choices.length >= TOTAL_CHOICES) break;
-    const beat = current(g);
-    if (!beat.options[i]) break;
-    record(g, beat, i);
-  }
+  const ctx = storyContext(code.seed, place);
+  const g: Game = { input, place, chart, code, ctx, flags: new Set(), choices: [], picks: [] };
+  for (const step of replayStory(ctx, picks).steps) record(g, step.resolved, step.resolved.options.indexOf(step.option));
   return g;
 }
 
@@ -338,7 +334,7 @@ function current(g: Game): ResolvedBeat {
 function record(g: Game, r: ResolvedBeat, i: number) {
   const opt = r.options[i];
   opt.set.forEach(f => g.flags.add(f));
-  g.picks.push(i);
+  g.picks.push(opt.key);
   g.choices.push({
     hour: r.beat.hour,
     agesLabel: agesLabel(r.beat),

@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeChart, type BirthInput } from './chart.ts';
 import { buildLifeCode, codeLines, TALENTS } from './profile.ts';
-import { agesLabel, AXES, BEATS, clockLabel, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES } from './story.ts';
+import { agesLabel, AXES, BEATS, clockLabel, replayStory, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES } from './story.ts';
 import { ARCHETYPES, BALANCED, buildReport, LOCKED_ITEMS, METHOD_NOTES, type Choice } from './report.ts';
 import { rng } from './rng.ts';
+import { BANNED } from './banned.ts';
 
 const input = (y: number, m: number, d: number, h: number, mi: number, gender: BirthInput['gender'] = 'female'): BirthInput => ({
   time: { year: y, month: m, day: d, hour: h, minute: mi },
@@ -112,7 +113,6 @@ test('报告:各模块生成且统计正确', () => {
 });
 
 // 文案红线:不出现预测、改运、断言吉凶或涉及健康、钱财决策的用语
-const BANNED = ['改运', '化解', '开光', '注定', '必然', '劫数', '灾', '凶', '吉凶', '大吉', '寿命', '疾病', '病', '死', '发财', '财运', '婚姻', '桃花', '克夫', '克妻', '算命', '预测'];
 
 test('所有面向玩家的文案都不含红线词', () => {
   const r = rng(3);
@@ -129,4 +129,28 @@ test('所有面向玩家的文案都不含红线词', () => {
     texts.push(...run.texts, ...codeLines(run.chart, run.code), rp.title, rp.contrast.text, rp.halves.text, rp.partner.text, rp.parallel?.text ?? '', ...rp.traits.map(t => t.evidence));
   }
   for (const t of texts) for (const w of BANNED) assert.ok(!t.includes(w), `「${t}」含有「${w}」`);
+});
+
+test('选项编号在每一幕内唯一,按编号重走得到同一个故事', () => {
+  for (const b of BEATS) {
+    const keys = b.options.map(x => x.key);
+    assert.equal(new Set(keys).size, keys.length, b.id);
+    assert.ok(keys.every(k => /^[a-h]$/.test(k)), b.id);
+  }
+  const r = rng(7);
+  for (let n = 0; n < 200; n++) {
+    const a = play(input(1980 + (n % 40), 1 + (n % 12), 1 + (n % 28), n % 24, 0), m => Math.floor(r() * m));
+    const keys: string[] = [];
+    const flags = new Set<string>();
+    for (let i = 0; i < a.choices.length; i++) {
+      const opt = resolveBeat(i, a.ctx, flags).options.find(x => x.text === a.choices[i].optionText)!;
+      opt.set.forEach(f => flags.add(f));
+      keys.push(opt.key);
+    }
+    const re = replayStory(a.ctx, keys);
+    assert.equal(re.steps.length, 24);
+    assert.deepEqual(re.steps.map(s => s.option.text), a.choices.map(c => c.optionText));
+    assert.deepEqual([...re.flags].sort(), [...a.flags].sort());
+  }
+  assert.equal(replayStory(storyContext(1, null), ['z']).steps.length, 0);
 });

@@ -11,7 +11,7 @@ export const ELEMENT_STAT: Record<Element, string> = {
   水: '洞察',
 };
 
-const KERNELS: Record<string, { title: string; image: string; desc: string }> = {
+export const KERNELS: Record<string, { title: string; image: string; desc: string }> = {
   甲: { title: '主干型', image: '参天大树', desc: '向上长，有主见，认准方向就不太回头。' },
   乙: { title: '藤蔓型', image: '花草藤蔓', desc: '柔韧，会借力，在缝隙里也能找到路。' },
   丙: { title: '恒星型', image: '正午太阳', desc: '热烈直接，习惯照亮周围的人。' },
