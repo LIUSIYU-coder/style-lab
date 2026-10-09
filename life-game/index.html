@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="description" content="输入出生时间,读取你的人生初始设定,再亲手走完一段平行人生。">
+<title>人生底层代码</title>
+</head>
+<body>
+<main id="app">
+  <section class="screen intro" id="screen-intro" aria-labelledby="intro-title">
+    <div class="dial" aria-hidden="true">
+      <div class="ring ring-outer">
+        <span style="--i:0">子</span><span style="--i:1">丑</span><span style="--i:2">寅</span><span style="--i:3">卯</span><span style="--i:4">辰</span><span style="--i:5">巳</span><span style="--i:6">午</span><span style="--i:7">未</span><span style="--i:8">申</span><span style="--i:9">酉</span><span style="--i:10">戌</span><span style="--i:11">亥</span>
+      </div>
+      <div class="ring ring-inner">
+        <span style="--i:0">甲</span><span style="--i:1">乙</span><span style="--i:2">丙</span><span style="--i:3">丁</span><span style="--i:4">戊</span><span style="--i:5">己</span><span style="--i:6">庚</span><span style="--i:7">辛</span><span style="--i:8">壬</span><span style="--i:9">癸</span>
+      </div>
+      <div class="dial-core"><span>0x</span></div>
+    </div>
+    <p class="eyebrow">一局用出生时间编译的人生游戏</p>
+    <h1 class="title" id="intro-title" tabindex="-1">人生<br>底层代码</h1>
+    <p class="lede">输入出生时间,读取你的初始设定。<br>然后从童年开始,亲手做出十个选择。</p>
+    <button class="btn primary" type="button" id="btn-start">开始编译</button>
+    <p class="meta">约 3 分钟 · 10 个选择 · 结束后生成你的选择画像</p>
+    <p class="fine">出生信息只在你的浏览器里计算,不会上传。<br>剧情与分析均为虚构的娱乐内容。</p>
+  </section>
+
+  <section class="screen" id="screen-form" aria-labelledby="form-title" hidden>
+    <p class="eyebrow">第一步</p>
+    <h2 class="h2" id="form-title" tabindex="-1">输入出生参数</h2>
+    <form id="birth-form" class="form" novalidate>
+      <div class="field">
+        <label for="birth-date">出生日期(公历)</label>
+        <input type="date" id="birth-date" name="date" value="1998-08-16" min="1920-01-01" max="2026-12-31" required>
+      </div>
+      <div class="field">
+        <label for="birth-time">出生时间(北京时间)</label>
+        <input type="time" id="birth-time" name="time" value="09:30" required>
+        <label class="check" for="unknown-time">
+          <input type="checkbox" id="unknown-time" name="unknownTime">
+          <span>不清楚具体时间,按中午 12:00 计算</span>
+        </label>
+      </div>
+      <fieldset class="field">
+        <legend>性别</legend>
+        <p class="hint" id="gender-hint">只用于排列大运的方向。</p>
+        <div class="seg">
+          <label class="seg-item" for="gender-female"><input type="radio" id="gender-female" name="gender" value="female" aria-describedby="gender-hint" required><span>女</span></label>
+          <label class="seg-item" for="gender-male"><input type="radio" id="gender-male" name="gender" value="male" aria-describedby="gender-hint"><span>男</span></label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="birth-city">出生城市(可选)</label>
+        <select id="birth-city" name="city" aria-describedby="city-hint">
+          <option value="">不校正,按北京时间排盘</option>
+        </select>
+        <p class="hint" id="city-hint">选了城市会换算成当地真太阳时。1986–1991 年夏令时期间出生的,会自动扣除一小时。</p>
+      </div>
+      <p class="form-error" id="form-error" role="alert" hidden></p>
+      <button class="btn primary" type="submit" id="btn-compile">读取底层代码</button>
+      <p class="fine">示例日期仅作演示,请改成你自己的。</p>
+    </form>
+    <button class="btn ghost" type="button" data-go="intro">返回</button>
+  </section>
+
+  <section class="screen" id="screen-decode" aria-labelledby="decode-title" hidden>
+    <p class="eyebrow">第二步</p>
+    <h2 class="h2" id="decode-title" tabindex="-1">正在编译</h2>
+    <div class="terminal" role="log" aria-live="polite">
+      <div class="term-bar"><i></i><i></i><i></i><span>life.code</span></div>
+      <pre class="term-body" id="term-body"></pre>
+    </div>
+    <div class="progress" aria-hidden="true"><span id="decode-progress"></span></div>
+    <button class="btn primary" type="button" id="btn-show-code" hidden>查看底层代码</button>
+    <button class="btn ghost" type="button" id="btn-skip">跳过动画</button>
+  </section>
+
+  <section class="screen" id="screen-code" aria-labelledby="code-title" hidden></section>
+  <section class="screen" id="screen-stage" aria-labelledby="stage-title" hidden></section>
+  <section class="screen" id="screen-result" aria-labelledby="result-title" hidden></section>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

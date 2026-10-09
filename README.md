@@ -1,5 +1,7 @@
 # HSK Prep（暂定名）
 
+> **当前在做的是 [`life-game/`](life-game/README.md):「人生底层代码」网页小游戏 demo。** 下面是此前搁置的 HSK 备考 App 原型,代码保留,暂不推进。
+
 面向外国学习者的 **新版 HSK 3.0 备考 App**（Expo / React Native，TypeScript）。
 
 当前状态：**原型**。有间隔复习核心、词表数据管线、一个用示例词跑的闪卡界面；还不是可上架的产品。
