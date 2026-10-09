@@ -1,22 +1,22 @@
 # 24 张场景插画：AI 绘图提示词
 
-游戏里每一幕默认用内置的矢量小画面。想换成更有质感的插画，就按下面的提示词生成 24 张图，放进 `public/scenes/`，再把 `src/config.ts` 里的 `SCENE_IMAGES` 改成 `true`。没放图之前保持 `false`，玩家看到的就是矢量画面，不会出现破图。
+书里每一幕默认是代码现场画的动态画面（会下雨、冒热气、随钟点变天色）。想换成更有质感的插画，就按下面的提示词生成 24 张图，放进 `public/scenes/`，再把 `src/config.ts` 里的 `SCENE_IMAGES` 改成 `true`。换成插画后，雨、热气这些动态效果仍会叠在插画上面。没放图之前保持 `false`，不会出现破图。
 
 ## 怎么生成
 
 - **工具**：即梦、豆包、可灵、Midjourney 都可以。商用前先看清该工具的用户协议，确认生成的图可以用在收费产品里。
-- **尺寸**：横图 16:10（比如 1600×1000）。游戏里显示的比例约为 1.64:1，四边会被裁掉一点，主体不要贴边。
+- **尺寸**：横图 4:3（比如 1600×1200），和书页里的画框一样。主体不要贴边，右下角会放一个物件小图标。
 - **文件**：存成 JPG，文件名就是下表的「文件名」，比如 `birth.jpg`。单张最好在 300KB 以内，手机打开才快。
 - **统一风格**：每一条都先粘上这段「公共风格」，再接这一幕的描述，24 张图才像同一本相册。
 - **不要画脸**：主角只画背影、侧影或手。这样每个玩家都能把自己代入进去，也能避开"像不像我"的问题。
 
 ### 公共风格（每条都先粘这段）
 
-> 温暖的中国小城生活插画，二〇〇〇年代的街巷，水彩加彩铅质感，纸张纹理，暖黄和砖红为主色，柔和的光线，安静、怀旧、有人间烟火气。画面里不要出现任何文字、招牌字和水印。主角只露背影或手，不画正脸。16:10 横构图。
+> 新中式水墨淡彩插画，徽派白墙黛瓦的中国小城，二〇〇〇年代的生活场景，宣纸纹理，黛青、石绿、朱砂红点缀，柔和的光线，安静、怀旧、有人间烟火气。画面里不要出现任何文字、招牌字和水印。主角只露背影或手，不画正脸。4:3 横构图。
 
 英文版（Midjourney 用）：
 
-> warm illustration of everyday life in a small Chinese town in the 2000s, watercolor and colored pencil texture, paper grain, warm yellow and brick red palette, soft light, quiet and nostalgic, no text, no signs, no watermark, main character seen from behind or only hands visible, no face --ar 16:10
+> modern Chinese ink-wash illustration with light color, a small town with white walls and dark tiled roofs (Huizhou style), everyday life in the 2000s, rice paper texture, indigo, mineral green and cinnabar red accents, soft light, quiet and nostalgic, no text, no signs, no watermark, main character seen from behind or only hands visible, no face --ar 4:3
 
 ## 24 幕
 
@@ -55,4 +55,4 @@
 2. 把 `life-game/src/config.ts` 里的 `export const SCENE_IMAGES = false;` 改成 `true`。
 3. 在服务器上重新部署（见 `docs/deploy.md` 的「更新」）。
 
-缺了某一张也没关系：那一幕会自动退回矢量画面。
+缺了某一张也没关系：那一幕会自动退回代码画的画面。
