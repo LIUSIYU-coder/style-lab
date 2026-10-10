@@ -35,6 +35,7 @@ export function deepHtml(d: DeepReport): string {
   const toc = [
     ['now', '现在这一页'],
     ['rewrites', '六行深读'],
+    ...(d.shift ? [['shift', '过去与想要的']] : []),
     ['patterns', '你是怎样的人'],
     ['pillars', '四柱'],
     ['dayun', '大运'],
@@ -137,6 +138,12 @@ export function deepHtml(d: DeepReport): string {
       <div class="panel-title"><span>六行底层代码</span><b>逐行深读</b></div>
       ${rewrites}
     </section>
+
+    ${d.shift ? `<section class="panel" id="d-shift">
+      <div class="panel-title"><span>${esc(d.shift.title)}</span><b>回忆 vs 设想</b></div>
+      ${d.shift.paragraphs.map(t => `<p>${esc(t)}</p>`).join('')}
+      <div class="shift-rows">${d.shift.rows.map(r => `<div class="shift-row${r.changed ? ' changed' : ''}"><b>${esc(r.title)}</b><span class="shift-line"><em>${esc(r.past)}</em><i aria-hidden="true">→</i><em class="to">${esc(r.future)}</em></span>${r.tip ? `<p class="hint">${esc(r.tip)}</p>` : ''}</div>`).join('')}</div>
+    </section>` : ''}
 
     <section class="panel" id="d-patterns">
       <div class="panel-title"><span>你是怎样的人</span><b>三种处境</b></div>

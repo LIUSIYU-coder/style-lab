@@ -379,6 +379,8 @@ export interface DeepReport {
   summary: string;
   /** 第一节:你现在所在的这一页 */
   now: { age: number; clock: string; stage: string; chose: string | null; text: string[]; concern: { title: string; text: string[] } | null };
+  /** 过去的你 vs 想要的你(玩家年龄让两边都有足够的页数时才有) */
+  shift: { title: string; paragraphs: string[]; rows: Array<{ title: string; past: string; future: string; changed: boolean; tip: string | null }> } | null;
   /** 第二节:六行底层代码逐行深读 */
   rewrites: Array<{ title: string; verdict: '顺写' | '改写' | '自由'; setting: string; choice: string; text: string[] }>;
   /** 你亲手写下的话 */
@@ -604,6 +606,25 @@ export function buildDeepReport({ chart, code, ctx, picks, report, reader, age }
     return { title: AXIS_POLES[rw.axis].join(' / '), verdict: rw.verdict, setting: rw.setting, choice: rw.choice, text };
   });
 
+  // 九·五、过去的你 vs 想要的你
+  let shift: DeepReport['shift'] = null;
+  const ts = report.timeSplit;
+  if (ts) {
+    const rows: NonNullable<DeepReport['shift']>['rows'] = [
+      ...ts.shifts.map(x => ({ title: AXIS_POLES[x.axis].join(' / '), past: x.pastPole, future: x.futurePole, changed: true, tip: `这周可以从「${PRACTICE[x.futurePole].title}」开始：${PRACTICE[x.futurePole].steps[0]}。` })),
+      ...ts.same.map(x => ({ title: AXIS_POLES[x.axis].join(' / '), past: x.pole, future: x.pole, changed: false, tip: null })),
+    ];
+    shift = {
+      title: '过去的你，和想要的你',
+      paragraphs: [
+        `你今年 ${ts.age} 岁。这本书里有 ${ts.pastCount} 页是你已经走过的（回忆和此刻），${ts.futureCount} 页是还没有发生的。回忆里你选的是"当时的你"，设想里你选的是"想成为的你"。把两边分开来看：`,
+        ts.text,
+        ts.shifts.length ? '下面是两边不一样的地方，以及各自可以从哪里开始。这只是你自己的选择里露出来的方向，也不是要求你一定要变成什么样。' : '没有哪一条线出现反转，说明你对未来的期待和过去的自己是同一个方向。把已经擅长的做深，也是很好的路。',
+      ],
+      rows,
+    };
+  }
+
   // 十、亲手写下的话
   const lines: DeepReport['lines'] = [];
   if (reader.lines.carer) lines.push({ label: `21:00，你写给${ctx.carer}的话`, text: reader.lines.carer });
@@ -627,6 +648,7 @@ export function buildDeepReport({ chart, code, ctx, picks, report, reader, age }
     title: `${reader.name ? reader.name + '的' : ''}人生说明书`,
     now: { age, clock: `${pad(nowBeat.hour)}:00`, stage: STAGES[nowBeat.stage].timeOfDay, chose: nowStep?.option.text ?? null, text: nowText, concern },
     rewrites,
+    shift,
     lines,
     summary: `${code.kernel}，${code.kernelImage}一样的本性，在这本书里走成了「${archetype.name}」。六行出生设定，你改写了 ${report.rewriteCount} 行。`,
     novel,

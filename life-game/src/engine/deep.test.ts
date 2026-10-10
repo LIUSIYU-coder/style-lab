@@ -3,16 +3,16 @@ import assert from 'node:assert/strict';
 import { computeChart, type BirthInput } from './chart.ts';
 import { buildLifeCode } from './profile.ts';
 import { agesLabel, CARERS, initialFlags, resolveBeat, storyContext, TOTAL_CHOICES } from './story.ts';
-import { CONCERNS, type Reader } from './reader.ts';
+import { CONCERNS, whoOf, type Reader } from './reader.ts';
 import { buildReport, type Choice } from './report.ts';
 import { buildDeepReport, DEEP_TEXTS, missingProse, type DeepReport } from './deep.ts';
 import { BANNED } from './banned.ts';
 import { rng } from './rng.ts';
 
-function run(inp: BirthInput, rand: () => number, place: string | null, reader: Reader = { name: '', carer: '外婆', concern: null, lines: {} }, age = 30) {
+function run(inp: BirthInput, rand: () => number, place: string | null, reader: Reader = { name: '', carer: '外婆', nick: '', friend: '', concern: null, lines: {} }, age = 30) {
   const chart = computeChart(inp);
   const code = buildLifeCode(chart);
-  const ctx = storyContext(code.seed, place, reader.carer);
+  const ctx = storyContext(code.seed, place, whoOf(reader));
   const flags = initialFlags(ctx);
   const picks: string[] = [];
   const choices: Choice[] = [];
@@ -23,18 +23,18 @@ function run(inp: BirthInput, rand: () => number, place: string | null, reader: 
     opt.set.forEach(f => flags.add(f));
     picks.push(opt.key);
     choices.push({
-      hour: r.beat.hour, agesLabel: agesLabel(r.beat), eventId: r.beat.id, optionText: opt.text, effects: opt.effects,
+      hour: r.beat.hour, agesLabel: agesLabel(r.beat), ages: r.beat.ages, eventId: r.beat.id, optionText: opt.text, effects: opt.effects,
       alternatives: r.options.filter((_, j) => j !== k).map(x => ({ text: x.text, effects: x.effects })),
     });
   }
-  const report = buildReport(chart, code, choices);
+  const report = buildReport(chart, code, choices, age);
   return { chart, code, ctx, picks, report, reader, age };
 }
 
 function allText(d: DeepReport): string[] {
   return [
     d.title, d.summary, ...d.now.text, d.now.concern?.title ?? '', ...(d.now.concern?.text ?? []),
-    ...d.rewrites.flatMap(x => [x.title, ...x.text]), ...d.lines.flatMap(l => [l.label, l.text]), ...d.novel.flatMap(c => [c.title, c.subtitle, ...c.paragraphs]), ...d.epilogue,
+    ...d.rewrites.flatMap(x => [x.title, ...x.text]), ...(d.shift ? [d.shift.title, ...d.shift.paragraphs, ...d.shift.rows.flatMap(r => [r.title, r.past, r.future, r.tip ?? ''])] : []), ...d.lines.flatMap(l => [l.label, l.text]), ...d.novel.flatMap(c => [c.title, c.subtitle, ...c.paragraphs]), ...d.epilogue,
     ...d.pillars.flatMap(p => [p.label, p.ganZhi, p.name, p.naYin, ...p.text]),
     ...d.daYun.flatMap(y => [y.ganZhi, y.ages, y.theme, y.text, y.inGame ?? '']),
     ...d.notes.flatMap(n => [n.picked, n.note, ...n.tags, ...n.others.flatMap(o => [o.text, o.result])]),
@@ -58,6 +58,8 @@ test('深度解析结构完整、无占位符、无红线词', () => {
     const reader: Reader = {
       name: i % 3 ? '阿禾' : '',
       carer: CARERS[i % CARERS.length],
+      nick: i % 4 === 0 ? '阿福' : '',
+      friend: i % 5 === 0 ? '小可' : '',
       concern: i % 6 === 5 ? null : CONCERNS[i % CONCERNS.length].key,
       lines: i % 2 ? { carer: '这些年，谢谢你。', dawn: '慢慢来，别怕。' } : {},
     };

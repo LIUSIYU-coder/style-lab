@@ -701,6 +701,16 @@ export const AFTER_IMAGE: Record<string, (s: SceneState) => number> = {
   newyear: s => s.lit,
 };
 
+/** 每张插画里碗和杯口的位置(占画面宽高的比例),热气从这里冒出来 */
+const STEAM_AT: Record<string, [number, number]> = {
+  breakfast: [0.34, 0.7],
+  noodles: [0.72, 0.36],
+  exam: [0.35, 0.6],
+  grandma: [0.22, 0.52],
+  latenight: [0.25, 0.52],
+  stall: [0.28, 0.5],
+};
+
 /** 用插画时:插画铺底,上面叠雨、热气、烟花这些动态层 */
 function overlayOnly(spec: SceneSpec, s: SceneState, img: HTMLImageElement, after: HTMLImageElement | null): Draw {
   const rain = makeRain(120);
@@ -721,8 +731,8 @@ function overlayOnly(spec: SceneSpec, s: SceneState, img: HTMLImageElement, afte
     }
     if (spec.id === 'newyear') fw(ctx, w, h * 0.6, t, s.lit > 0.5);
     s.wind *= 0.95;
-    if (spec.place === 'market' && spec.hour < 20 && spec.hour > 4) steam(ctx, t, [[w * 0.5, h * 0.8, w * 0.2, (1 - s.cool) * 0.45]], s.wind);
-    if (spec.place === 'kitchen' || spec.id === 'exam') steam(ctx, t, [[w * 0.35, h * 0.62, w * 0.18, 0.4]], 0);
+    const at = STEAM_AT[spec.id];
+    if (at) steam(ctx, t, [[w * at[0], h * at[1], w * 0.08, spec.id === 'breakfast' ? (1 - s.cool) * 0.5 : spec.id === 'stall' ? 0.08 : 0.3]], s.wind);
     if (spec.rain) rain(ctx, w, h);
   };
 }

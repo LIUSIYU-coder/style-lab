@@ -123,7 +123,7 @@ export const BEATS: readonly Beat[] = [
       [null, '{home}的一个清晨，你出生了。爸妈白天都要上班，你是{carer}带大的。{ta}在窗边挂了一串旧风铃，说这样你每天睁开眼，第一眼就能看到光。你——'],
     ],
     options: [
-      o('a', '伸手去抓那串叮当响的风铃', '风铃被你扯得乱响，{carer}赶紧把它挂高了一点，嘴上念叨：这孩子，胆子大。', { act: 1, risk: 1 }),
+      o('a', '伸手去抓那串叮当响的风铃', [['nick', '风铃被你扯得乱响，{carer}赶紧把它挂高了一点，嘴上念叨：{nick}啊，你这孩子，胆子真大。'], [null, '风铃被你扯得乱响，{carer}赶紧把它挂高了一点，嘴上念叨：这孩子，胆子大。']], { act: 1, risk: 1 }),
       o('b', '盯着窗帘缝里的光斑看了很久', '光一点点挪过墙面，你看得很认真，一声都没哭。{carer}说你是个"看事的人"。', { act: -1, emo: -1 }),
       o('c', '哇哇大哭，把全家人都叫了过来', '一屋子的人围过来哄你，有人唱歌，有人摇拨浪鼓。你哭着哭着，就笑了。', { emo: 1, self: -1 }),
       o('d', '攥住{carer}的手指不放', '{carer}的手指粗糙又暖和。你攥着它，又安心地睡着了，{ta}一动也不敢动。', { self: -1, risk: -1 }),
@@ -176,7 +176,10 @@ export const BEATS: readonly Beat[] = [
   },
   {
     id: 'noodles', hour: 11, ages: [11, 12], stage: 0, place: 'kitchen', prop: 'bowl',
-    text: '小学最后一个暑假，蝉叫得人心烦。{carer}把你叫进厨房，说要教你做{ta}拿手的番茄鸡蛋面："以后{carer}不在你身边，你也饿不着。"你——',
+    text: [
+      ['nick', '小学最后一个暑假，蝉叫得人心烦。{carer}在厨房里扬声喊你的小名：“{nick}，进来！”{ta}要教你做拿手的番茄鸡蛋面："以后{carer}不在你身边，你也饿不着。"你——'],
+      [null, '小学最后一个暑假，蝉叫得人心烦。{carer}把你叫进厨房，说要教你做{ta}拿手的番茄鸡蛋面："以后{carer}不在你身边，你也饿不着。"你——'],
+    ],
     options: [
       o('a', '认真记下每一步，写在一个小本子上', '"番茄要先炒出沙，鸡蛋要嫩。"你一笔一笔地记。那个小本子，后来跟着你去了很多地方。', { time: 1, rule: -1 }, { set: ['recipe'] }),
       o('b', '不看步骤，按自己的想法放调料', '面有点咸，{carer}还是吃了个精光，笑着说：比我做的有意思。', { rule: 1, risk: 1 }),
@@ -215,7 +218,10 @@ export const BEATS: readonly Beat[] = [
   },
   {
     id: 'exam', hour: 14, ages: [17, 18], stage: 1, place: 'home', prop: 'lamp',
-    text: '高考前的最后一天。窗外的蝉叫得很响，书桌上的试卷堆得比台灯还高。{carer}煮了一碗番茄鸡蛋面，轻手轻脚地端进来。你——',
+    text: [
+      ['nick', '高考前的最后一天。窗外的蝉叫得很响，书桌上的试卷堆得比台灯还高。{carer}煮了一碗番茄鸡蛋面，轻手轻脚地端进来，小声说：“{nick}，趁热吃。”你——'],
+      [null, '高考前的最后一天。窗外的蝉叫得很响，书桌上的试卷堆得比台灯还高。{carer}煮了一碗番茄鸡蛋面，轻手轻脚地端进来。你——'],
+    ],
     options: [
       o('a', '把错题本再翻一遍', '翻到第三遍，你发现那些错过的题都认识你了。心反而静了下来。', { rule: -1, act: -1 }),
       o('b', '放下书，陪{carer}在楼下坐一会儿', '{carer}说考成什么样都没关系，有面吃就行。你突然一点也不紧张了。', { emo: 1, time: -1 }),
@@ -375,7 +381,10 @@ export const BEATS: readonly Beat[] = [
   },
   {
     id: 'grandma', hour: 2, ages: [53, 57], stage: 3, place: 'kitchen', prop: 'bowl',
-    text: '{carer}很老了。很多事记不清了，有时叫错你的名字，却还记得你小时候爱吃的那碗面，记得窗边那串风铃。你——',
+    text: [
+      ['nick', '{carer}很老了。很多事记不清了，有时叫错你的名字，可一开口，喊的还是你的小名：“{nick}”。{ta}还记得你小时候爱吃的那碗面，记得窗边那串风铃。你——'],
+      [null, '{carer}很老了。很多事记不清了，有时叫错你的名字，却还记得你小时候爱吃的那碗面，记得窗边那串风铃。你——'],
+    ],
     options: [
       o('a', '翻开那个小本子，照着做给{ta}吃', '{carer}吃了一口，慢慢点头：嗯，是这个味道。', { emo: 1, rule: -1 }, { if: 'recipe' }),
       o('b', '请{carer}再教你一次', '{ta}站在灶台边，一步一步慢慢地说。这一次，你全记下来了。', { time: 1, rule: -1 }, { if: '!recipe', set: ['recipe'] }),
@@ -438,6 +447,8 @@ export interface StoryContext {
   far: string;
   /** 小时候主要带大你的人 */
   carer: Carer;
+  /** 家里人怎么叫你(小名),没填为空 */
+  nick: string;
 }
 
 export const CARERS = ['外婆', '奶奶', '外公', '爷爷', '妈妈', '爸爸'] as const;
@@ -446,20 +457,32 @@ const CARER_TA: Record<Carer, string> = { 外婆: '她', 奶奶: '她', 外公: 
 
 /** 每局开始时就有的剧情标记(比如是爸妈自己带大的) */
 export function initialFlags(ctx: StoryContext): Set<string> {
-  return new Set(ctx.carer === '妈妈' || ctx.carer === '爸爸' ? ['parent'] : []);
+  const flags = new Set<string>();
+  if (ctx.carer === '妈妈' || ctx.carer === '爸爸') flags.add('parent');
+  if (ctx.nick) flags.add('nick');
+  return flags;
 }
 
 const FRIEND_NAMES = ['小满', '阿远', '乐乐', '阿禾', '小舟', '安安', '阿树', '米粒'];
 const FAR_CITIES = ['海边那座城', '北方那座大城', '南方那座老城', '西边那座山城'];
 
+export interface WhoYouAre {
+  carer: Carer;
+  /** 玩家填的最好朋友的名字,没填就按种子挑一个 */
+  friend?: string;
+  nick?: string;
+}
+
 /** 朋友的名字和远方的城市按种子固定;家乡用玩家填的出生地,没填就是"小城"。 */
-export function storyContext(seed: number, placeName: string | null, carer: Carer = '外婆'): StoryContext {
+export function storyContext(seed: number, placeName: string | null, who: WhoYouAre = { carer: '外婆' }): StoryContext {
   const r = rng(seed ^ 0x5eed);
+  const picked = FRIEND_NAMES[Math.floor(r() * FRIEND_NAMES.length)];
   return {
-    friend: FRIEND_NAMES[Math.floor(r() * FRIEND_NAMES.length)],
+    friend: who.friend || picked,
     far: FAR_CITIES[Math.floor(r() * FAR_CITIES.length)],
     home: placeName ? placeName.replace(/(市|区|县|自治州|地区|盟)$/, '') : '小城',
-    carer,
+    carer: who.carer,
+    nick: who.nick ?? '',
   };
 }
 
@@ -478,6 +501,7 @@ export function fill(line: Line, ctx: StoryContext, flags: ReadonlySet<string>):
   const hobby = HOBBIES[hobbyOf(flags)];
   const city = flags.has('left') && !flags.has('back') ? ctx.far : ctx.home;
   return text
+    .replaceAll('{nick}', ctx.nick)
     .replaceAll('{carer}', ctx.carer)
     .replaceAll('{ta}', CARER_TA[ctx.carer])
     .replaceAll('{friend}', ctx.friend)
@@ -579,3 +603,31 @@ export function beatIndexForAge(age: number): number {
   const i = BEATS.findIndex(b => age <= b.ages[1]);
   return i === -1 ? BEATS.length - 1 : i;
 }
+
+/* ---------------- 回忆 / 此刻 / 设想 ---------------- */
+
+export type TimeKind = 'past' | 'now' | 'future';
+
+/** 按玩家现实中的年龄,这一页是已经过去的回忆、正在经历的此刻,还是还没发生的设想 */
+export function timeKind(ages: readonly [number, number], age: number): TimeKind {
+  if (ages[1] < age) return 'past';
+  if (ages[0] > age) return 'future';
+  return 'now';
+}
+
+/** 这一页对应的真实年份,最后一页是"起" */
+export function yearLabel(birthYear: number, ages: readonly [number, number], last = false): string {
+  const a = birthYear + ages[0];
+  const b = birthYear + ages[1];
+  if (last) return `${a} 年起`;
+  return a === b ? `${a} 年` : `${a}—${b} 年`;
+}
+
+export const TIME_LABEL: Record<TimeKind, string> = { past: '回忆', now: '此刻', future: '设想' };
+
+/** 选项前面的一句提示:回忆里选"当时的你",设想里选"想要的你",这样同一份选择两种含义都读得通 */
+export const PICK_HINT: Record<TimeKind, string> = {
+  past: '回想那几年，选一个和当时的你更接近的。',
+  now: '这一页就是现在，选一个此刻的你。',
+  future: '这一页还没有发生。选一个你希望自己会成为的。',
+};

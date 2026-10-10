@@ -8,12 +8,12 @@ import { PROVINCES } from './engine/regions.ts';
 import { buildLifeCode, codeLines, type LifeCode } from './engine/profile.ts';
 import {
   agesLabel, AXES, AXIS_POLES, BEATS, beatIndexForAge, CARERS, clockLabel, environmentFor, initialFlags, replayStory,
-  resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, fill,
+  resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, fill, timeKind, yearLabel, PICK_HINT, TIME_LABEL,
   type Carer, type Effects, type ResolvedBeat, type StoryContext,
 } from './engine/story.ts';
 import { buildReport, choiceOf, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
 import { MAX_YEAR, MIN_YEAR } from './engine/validate.ts';
-import { ageOn, CONCERNS, DEFAULT_READER, MAX_LINE, MAX_NAME, cleanText, type Reader } from './engine/reader.ts';
+import { ageOn, CONCERNS, DEFAULT_READER, MAX_LINE, MAX_NAME, MAX_NICK, cleanText, whoOf, type Reader } from './engine/reader.ts';
 import type { DeepReport } from './engine/deep.ts';
 import { clearSave, loadSave, writeSave } from './save.ts';
 import { esc } from './html.ts';
@@ -56,7 +56,7 @@ let draft: Reader = { ...DEFAULT_READER, lines: {} };
 function newGame(input: BirthInput, place: string | null, reader: Reader, picks: string[] = []): Game {
   const chart = computeChart(input);
   const code = buildLifeCode(chart);
-  const ctx = storyContext(code.seed, place, reader.carer);
+  const ctx = storyContext(code.seed, place, whoOf(reader));
   const g: Game = { input, place, reader, chart, code, ctx, flags: initialFlags(ctx), choices: [], picks: [] };
   for (const step of replayStory(ctx, picks).steps) record(g, step.resolved, step.resolved.options.indexOf(step.option));
   return g;
@@ -131,6 +131,11 @@ function namePage(): HTMLElement {
       <div class="chips" role="group" aria-labelledby="carer-label">${CARERS.map(c => `<button class="chip" type="button" aria-pressed="${c === draft.carer}">${c}</button>`).join('')}</div>
       <p class="hint">书里那个陪你长大的人，会是 TA。</p>
     </div>
+    <div class="field"><label for="f-nick">家里人小时候怎么叫你（小名，可以不填）</label>
+      <input id="f-nick" class="ink-input" maxlength="${MAX_NICK}" placeholder="比如：丫丫" autocomplete="off" value="${esc(draft.nick)}">
+      <p class="hint">填了，书里带大你的人会用这个名字喊你。</p></div>
+    <div class="field"><label for="f-friend">小时候最好的朋友叫什么（可以不填）</label>
+      <input id="f-friend" class="ink-input" maxlength="${MAX_NICK}" placeholder="不填，书里会给 TA 起个名字" autocomplete="off" value="${esc(draft.friend)}"></div>
     <button class="btn solid start" type="button" id="next">下一页</button>
   `, { head: '扉页', folio: 1, cls: 'flyleaf' });
   el.querySelectorAll<HTMLButtonElement>('.chip').forEach(b => (b.onclick = () => {
@@ -139,6 +144,8 @@ function namePage(): HTMLElement {
   }));
   $('#next', el).onclick = () => {
     draft.name = cleanText($<HTMLInputElement>('#f-name', el).value, MAX_NAME);
+    draft.nick = cleanText($<HTMLInputElement>('#f-nick', el).value, MAX_NICK);
+    draft.friend = cleanText($<HTMLInputElement>('#f-friend', el).value, MAX_NICK);
     book.turn(birthPage());
   };
   return el;
@@ -382,11 +389,12 @@ function beatPage(g: Game): HTMLElement {
   const beat = r.beat;
   const st = STAGES[beat.stage];
   const env = environmentFor(g.chart, beat.ages);
-  const nowIdx = beatIndexForAge(ageOn(g.input.time));
-  const isNow = nowIdx === r.index;
+  const age = ageOn(g.input.time);
+  const kind = timeKind(beat.ages, age);
+  const year = yearLabel(g.input.time.year, beat.ages, r.index === TOTAL_CHOICES - 1);
   const el = book.page(`
     <div class="when"><b>${clockLabel(beat.hour)}</b><span>${esc(shichen(beat.hour))} · ${esc(agesLabel(beat))}</span></div>
-    ${isNow ? '<p class="now-tag">这一页的年纪，就是现在的你</p>' : ''}
+    <p class="era era-${kind}"><span class="era-tag">${TIME_LABEL[kind]}</span><span>${esc(year)}${kind === 'now' ? ' · 这一页的年纪，就是现在的你' : ''}</span></p>
     <figure class="plate" role="img" aria-label="${esc(`${st.timeOfDay}，${agesLabel(beat)}的画面`)}">${propSvg(r.scene.prop)}</figure>
     <div class="prose"></div>
     <p class="footnote">注：这几年行「${esc(env.ganZhi)}」大运。${esc(env.relation)}</p>
@@ -449,6 +457,7 @@ function beatPage(g: Game): HTMLElement {
     }
 
     await reveal(prose, sentences(r.text));
+    append(prose, `<p class="pick-hint ink-in">${esc(PICK_HINT[kind])}</p>`);
     const i = await choose(prose, r.options.map(o => o.text));
     const opt = r.options[i];
     Sound.pick();
@@ -564,8 +573,8 @@ function openAppendix() {
 }
 
 function renderAppendix(g: Game) {
-  const r = buildReport(g.chart, g.code, g.choices);
   const age = ageOn(g.input.time);
+  const r = buildReport(g.chart, g.code, g.choices, age);
   const nowBeat = BEATS[beatIndexForAge(age)];
   const who = g.reader.name || '你';
   const lines = Object.entries(g.reader.lines).filter(([, v]) => v);
@@ -598,6 +607,9 @@ function renderAppendix(g: Game) {
     ${section('设定 vs 选择', `<p class="insight">出生设定里的六行底层代码，你<em>改写了 ${r.rewriteCount} 行</em>。</p>
       <div class="table-scroll"><table class="rewrite"><thead><tr><th scope="col">维度</th><th scope="col">出生设定</th><th scope="col">你的选择</th><th scope="col"></th></tr></thead><tbody>${rewrites}</tbody></table></div>
       <p class="hint">每一行为什么会这样、在现实里意味着什么，写在《人生说明书》里。</p>`)}
+    ${r.timeSplit ? section('过去的你 → 想要的你', `<p class="insight">${esc(r.timeSplit.text)}</p>
+      ${r.timeSplit.shifts.length ? `<div class="shift-rows">${r.timeSplit.shifts.slice(0, 3).map(x => `<div class="shift-row changed"><b>${AXIS_POLES[x.axis].join(' / ')}</b><span class="shift-line"><em>${esc(x.pastPole)}</em><i aria-hidden="true">→</i><em class="to">${esc(x.futurePole)}</em></span></div>`).join('')}</div>` : ''}
+      <p class="hint">你今年 ${r.timeSplit.age} 岁：${r.timeSplit.pastCount} 页是你走过的回忆（选的是当时的你），${r.timeSplit.futureCount} 页是还没发生的设想（选的是想成为的你）。每一条怎么理解、从哪里开始，写在《人生说明书》里。</p>`, '回忆 vs 设想') : ''}
     ${section('一日表盘', `<div class="dial-wrap">${dial(r)}</div><p class="hint">红点是体现「${esc(r.mainPole)}」的时刻，共 ${r.timeline.filter(t => t.main).length} 个。</p>`, '24 个选择')}
     ${section('名场面', moments, `最能体现「${esc(r.mainPole)}」`)}
     ${lines.length ? section('你亲手写下的话', lines.map(([, v]) => `<p class="written still">${esc(v)}</p>`).join('')) : ''}

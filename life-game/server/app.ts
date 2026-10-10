@@ -10,7 +10,7 @@ import { replayStory, storyContext } from '../src/engine/story.ts';
 import { buildReport, choiceOf } from '../src/engine/report.ts';
 import { buildDeepReport } from '../src/engine/deep.ts';
 import { parseBirthInput, parsePicks, parsePlace } from '../src/engine/validate.ts';
-import { ageOn, parseReader } from '../src/engine/reader.ts';
+import { ageOn, parseReader, whoOf } from '../src/engine/reader.ts';
 import { CodeStore, isDeviceId, MAX_DEVICES, UpstashError } from './codes.ts';
 import { ADMIN_PAGE } from './admin-page.ts';
 
@@ -130,10 +130,10 @@ export function createApp(opts: AppOptions): Server {
     try {
       const chart = computeChart(input);
       const code = buildLifeCode(chart);
-      const ctx = storyContext(code.seed, place, reader.carer);
+      const ctx = storyContext(code.seed, place, whoOf(reader));
       const { steps } = replayStory(ctx, picks);
       if (steps.length !== picks.length) return send(res, 400, { ok: false, error: ERRORS.incomplete });
-      const report = buildReport(chart, code, steps.map(s => choiceOf(s.resolved, s.option)));
+      const report = buildReport(chart, code, steps.map(s => choiceOf(s.resolved, s.option)), ageOn(input.time));
       deep = buildDeepReport({ chart, code, ctx, picks, report, reader, age: ageOn(input.time) });
     } catch {
       return send(res, 400, { ok: false, error: ERRORS.bad });

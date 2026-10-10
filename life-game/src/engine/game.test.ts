@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeChart, type BirthInput } from './chart.ts';
 import { buildLifeCode, codeLines, TALENTS } from './profile.ts';
-import { agesLabel, AXES, BEATS, clockLabel, replayStory, resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES } from './story.ts';
-import { ARCHETYPES, BALANCED, buildReport, LOCKED_ITEMS, METHOD_NOTES, type Choice } from './report.ts';
+import { agesLabel, AXES, BEATS, clockLabel, initialFlags, replayStory, resolveBeat, shichen, STAGES, storyContext, timeKind, TOTAL_CHOICES, yearLabel, type WhoYouAre } from './story.ts';
+import { ARCHETYPES, BALANCED, buildReport, LOCKED_ITEMS, METHOD_NOTES, splitByTime, type Choice } from './report.ts';
+import { parseReader } from './reader.ts';
 import { rng } from './rng.ts';
 import { BANNED } from './banned.ts';
 
@@ -14,11 +15,11 @@ const input = (y: number, m: number, d: number, h: number, mi: number, gender: B
 });
 
 /** 走完一生:pick 决定每一幕选第几个可用选项 */
-function play(inp: BirthInput, pick: (n: number, step: number) => number, place: string | null = null) {
+function play(inp: BirthInput, pick: (n: number, step: number) => number, place: string | null = null, who: WhoYouAre = { carer: '外婆' }) {
   const chart = computeChart(inp);
   const code = buildLifeCode(chart);
-  const ctx = storyContext(code.seed, place);
-  const flags = new Set<string>();
+  const ctx = storyContext(code.seed, place, who);
+  const flags = initialFlags(ctx);
   const choices: Choice[] = [];
   const texts: string[] = [];
   const seenOptions: string[] = [];
@@ -33,6 +34,7 @@ function play(inp: BirthInput, pick: (n: number, step: number) => number, place:
     choices.push({
       hour: r.beat.hour,
       agesLabel: agesLabel(r.beat),
+      ages: r.beat.ages,
       eventId: r.beat.id,
       optionText: opt.text,
       effects: opt.effects,
@@ -153,4 +155,69 @@ test('选项编号在每一幕内唯一,按编号重走得到同一个故事', (
     assert.deepEqual([...re.flags].sort(), [...a.flags].sort());
   }
   assert.equal(replayStory(storyContext(1, null), ['z']).steps.length, 0);
+});
+
+test('小名和朋友的真名会出现在书里,没填时用默认,任何情况下都没有残留占位符', () => {
+  const inp = input(1996, 3, 8, 14, 20);
+  const named = play(inp, () => 0, '成都市', { carer: '奶奶', friend: '小可', nick: '丫丫' });
+  const all = named.texts.join('');
+  assert.ok(all.includes('丫丫'), '小名应该出现');
+  assert.ok(named.texts.some(t => t.includes('小可')), '朋友的真名应该出现');
+  assert.ok(!named.texts.some(t => ['阿远', '乐乐', '米粒'].some(n => t.includes(n))), '填了真名就不该再出现随机名字');
+  const plain = play(inp, () => 0, '成都市');
+  assert.ok(!plain.texts.join('').includes('丫丫'));
+  const r = rng(21);
+  for (let i = 0; i < 300; i++) {
+    const who: WhoYouAre = { carer: (['外婆', '奶奶', '外公', '爷爷', '妈妈', '爸爸'] as const)[i % 6], nick: i % 2 ? '小宝' : undefined, friend: i % 3 ? undefined : '阿杰' };
+    const run = play(input(1960 + (i % 60), 1 + (i % 12), 1 + (i % 28), i % 24, 0), n => Math.floor(r() * n), i % 2 ? '杭州市' : null, who);
+    for (const t of run.texts) assert.ok(!/[{}]/.test(t), `残留占位符:${t}`);
+  }
+});
+
+test('回忆 / 此刻 / 设想:按现实年龄分,并给出真实年份', () => {
+  assert.equal(timeKind([5, 6], 28), 'past');
+  assert.equal(timeKind([25, 27], 26), 'now');
+  assert.equal(timeKind([25, 27], 25), 'now');
+  assert.equal(timeKind([28, 30], 27), 'future');
+  assert.equal(yearLabel(1998, [5, 6]), '2003—2004 年');
+  assert.equal(yearLabel(1998, [0, 0]), '1998 年');
+  assert.equal(yearLabel(1998, [76, 88], true), '2074 年起');
+  // 24 页里,任何年龄至少有一页是"此刻"或者全是回忆/设想,不会出现空洞
+  for (const age of [0, 5, 28, 45, 70, 90]) {
+    const kinds = BEATS.map(b => timeKind(b.ages, age));
+    assert.equal(kinds.length, 24);
+    if (age <= 88) assert.ok(kinds.includes('now'), `${age} 岁应该落在某一页上`);
+  }
+});
+
+test('过去 vs 想要的:分开统计,太年轻或太老时不硬凑', () => {
+  const r = rng(5);
+  const run = play(input(1998, 8, 16, 9, 30), n => Math.floor(r() * n));
+  const split = splitByTime(run.choices, 28);
+  assert.ok(split);
+  assert.equal(split.pastCount + split.futureCount, 24);
+  assert.ok(split.pastCount >= 4 && split.futureCount >= 4);
+  for (const sh of split.shifts) assert.notEqual(sh.pastPole, sh.futurePole);
+  assert.ok(split.text.length > 10);
+  assert.equal(splitByTime(run.choices, 3), null, '3 岁时设想以外的页太少');
+  assert.equal(splitByTime(run.choices, 95), null, '95 岁时没有设想');
+  assert.equal(buildReport(run.chart, run.code, run.choices).timeSplit, null, '不传年龄就没有');
+  assert.ok(buildReport(run.chart, run.code, run.choices, 28).timeSplit);
+  // 回忆全选冒险、设想全选稳妥时,一定能看出反转
+  const forced = run.choices.map(c => ({ ...c, effects: timeKind(c.ages, 28) === 'future' ? { risk: -1 } : { risk: 1 } }));
+  const sh = splitByTime(forced, 28)!;
+  assert.equal(sh.shifts[0].pastPole, '冒险');
+  assert.equal(sh.shifts[0].futurePole, '稳妥');
+});
+
+test('读者信息:小名和朋友名被清理,旧存档缺字段时用空值', () => {
+  const rd = parseReader({ carer: '外公', name: '  阿禾<script>', nick: '丫丫丫丫丫丫丫丫', friend: 'a\nb', concern: null, lines: {} });
+  assert.ok(rd);
+  assert.equal(rd.name, '阿禾script');
+  assert.equal(rd.nick.length, 6);
+  assert.equal(rd.friend, 'ab');
+  const old = parseReader({ carer: '奶奶', name: '', concern: null, lines: {} });
+  assert.equal(old?.nick, '');
+  assert.equal(old?.friend, '');
+  assert.equal(parseReader({ carer: '邻居' }), null);
 });

@@ -2,11 +2,13 @@
 // 只描述游戏中的选择倾向；建议只给低风险的小行动；不涉及吉凶、财运、婚恋、健康。
 import type { Chart, Family } from './chart.ts';
 import type { LifeCode } from './profile.ts';
-import { agesLabel, AXES, AXIS_POLES, clockLabel, type Axis, type Effects, type ResolvedBeat, type ResolvedOption } from './story.ts';
+import { agesLabel, AXES, AXIS_POLES, clockLabel, timeKind, type Axis, type Effects, type ResolvedBeat, type ResolvedOption } from './story.ts';
 
 export interface Choice {
   hour: number;
   agesLabel: string;
+  /** 这一幕对应的年龄范围,用来分出"回忆"和"设想" */
+  ages: [number, number];
   eventId: string;
   optionText: string;
   effects: Effects;
@@ -31,6 +33,7 @@ export function choiceOf(r: ResolvedBeat, opt: ResolvedOption): Choice {
   return {
     hour: r.beat.hour,
     agesLabel: agesLabel(r.beat),
+    ages: r.beat.ages,
     eventId: r.beat.id,
     optionText: opt.text,
     effects: opt.effects,
@@ -103,6 +106,7 @@ export const LOCKED_ITEMS = [
   '你现在所在的这一页：按你的真实年龄，你正走到书里的哪一刻，那几年的章节背景是什么',
   '你最近在意的那件事：结合你的选择方式，给你的具体提醒',
   '六行底层代码逐行深读：哪一行是天生的，哪一行是你亲手改写的，在现实里意味着什么',
+  '过去的你和想要的你：回忆里的选择，和你对未来的选择，哪几条线变了方向、各自从哪里开始',
   '做决定、和人相处、面对压力时的你，四柱逐柱与大运人生章节',
   '24 个选择逐条批注：没走的那条路会怎样；四周小实验',
   '"破晓时分的你"写来的一封信，附赠用你的选择写成的小说《你的这一天》',
@@ -197,6 +201,46 @@ export interface Report {
   consistency: { pct: number; label: string };
   parallel: { moment: Moment; alternative: string; text: string } | null;
   contrast: { aligned: boolean | null; text: string };
+  /** 过去和此刻的选择 vs 对还没发生的那几页的选择;玩家年龄太小或太大、某一边不足 4 页时为 null */
+  timeSplit: TimeSplit | null;
+}
+
+export interface TimeSplit {
+  age: number;
+  /** 回忆和此刻的页数 / 设想的页数 */
+  pastCount: number;
+  futureCount: number;
+  /** 两边方向不同的维度,按差异从大到小 */
+  shifts: Array<{ axis: Axis; pastPole: string; futurePole: string }>;
+  /** 两边方向一致的维度 */
+  same: Array<{ axis: Axis; pole: string }>;
+  text: string;
+}
+
+/**
+ * 回忆里选的是"当时的你",设想里选的是"想成为的你"。
+ * 把两边分开统计:哪几条维度,想要的和过去的不一样?这是游戏里最贴近现实的发现,但只是选择倾向,不是预测。
+ */
+export function splitByTime(choices: Choice[], age: number): TimeSplit | null {
+  const past = choices.filter(c => timeKind(c.ages, age) !== 'future');
+  const future = choices.filter(c => timeKind(c.ages, age) === 'future');
+  if (past.length < 4 || future.length < 4) return null;
+  const ps = sumScores(past);
+  const fs = sumScores(future);
+  const shifts: TimeSplit['shifts'] = [];
+  const same: TimeSplit['same'] = [];
+  const ranked = [...AXES].sort((a, b) => Math.abs(ps[b] - fs[b]) - Math.abs(ps[a] - fs[a]));
+  for (const axis of ranked) {
+    if (ps[axis] === 0 || fs[axis] === 0) continue;
+    if (Math.sign(ps[axis]) !== Math.sign(fs[axis])) shifts.push({ axis, pastPole: poleOf(axis, ps[axis]), futurePole: poleOf(axis, fs[axis]) });
+    else same.push({ axis, pole: poleOf(axis, ps[axis]) });
+  }
+  const text = shifts.length
+    ? `回想过去，你更多是「${shifts[0].pastPole}」的人；可是面对还没发生的那几页，你选的是「${shifts[0].futurePole}」。你想成为的样子，和过去的自己有不一样的地方。`
+    : same.length
+      ? `过去的你和想要的你，在「${same[0].pole}」这条线上方向一致：你想继续做的，正是你一直在做的那种人。`
+      : '过去和想要的未来，你的选择都比较均衡，没有哪一边特别突出。';
+  return { age, pastCount: past.length, futureCount: future.length, shifts, same, text };
 }
 
 /** 天赋模块在选择维度上的"默认倾向",用来对比设定和选择。 */
@@ -220,7 +264,7 @@ function rankAxes(scores: Record<Axis, number>): Axis[] {
 
 const moment = (c: Choice): Moment => ({ hour: c.hour, clock: clockLabel(c.hour), agesLabel: c.agesLabel, optionText: c.optionText });
 
-export function buildReport(chart: Chart, code: LifeCode, choices: Choice[]): Report {
+export function buildReport(chart: Chart, code: LifeCode, choices: Choice[], age?: number): Report {
   const scores = sumScores(choices);
   const ranked = rankAxes(scores);
   const mainAxis = ranked[0];
@@ -346,6 +390,7 @@ export function buildReport(chart: Chart, code: LifeCode, choices: Choice[]): Re
     consistency,
     parallel,
     contrast: contrastFor(code, scores),
+    timeSplit: age === undefined ? null : splitByTime(choices, age),
   };
 }
 
