@@ -4,7 +4,7 @@ export const SHOP = {
   where: '小红书搜索「人生底层代码」，在店铺里购买兑换码',
   price: '9.9 元',
   /** 正式网址（不带 https://），印在分享图底部；留空则不印 */
-  site: '',
+  site: 'life-book-ob93.onrender.com',
 };
 
 /** 兑换接口，相对网页所在目录 */
