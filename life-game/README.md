@@ -58,6 +58,7 @@ npm run codes -- make 10 test   # 生成 10 个测试兑换码,保存在 data/co
 | `src/ui/sound.ts` | Web Audio 现场合成的环境声和音效 |
 | `src/engine/reader.ts` | 扉页信息(称呼、带大你的人、小名、朋友名)、现实困惑、亲手写的话、真实年龄 |
 | `server/` | 兑换服务器(`app.ts` 接口、管理接口与静态文件,`codes.ts` 兑换码仓库:本机文件或 Upstash,`admin-page.ts` 管理页) |
+| `scripts/make-sample.ts` | 生成《人生说明书》样张节选(`npm run sample`,写入 `src/sample-deep.json`),封面和解锁区的"看样张"用它;改了 `deep.ts` 的文案后要重新运行 |
 | `scripts/codes.ts` | 兑换码管理:生成、查询、重置设备、作废、统计 |
 | `deploy/install.sh` | Ubuntu / Debian 一键部署(Node + Caddy HTTPS + systemd) |
 | `scripts/inline.mjs` | 把构建产物内联成单文件 |

@@ -89,6 +89,16 @@ test('接口:兑换深度解析、静态文件、限流', async () => {
   try {
     const home = await fetch(base + '/');
     assert.equal(home.status, 200);
+    const big = 'x'.repeat(5000);
+    writeFileSync(join(dist, 'assets', 'big.js'), big);
+    const gz = await fetch(base + '/assets/big.js', { headers: { 'accept-encoding': 'gzip' } });
+    assert.equal(gz.headers.get('content-encoding'), 'gzip');
+    assert.equal(await gz.text(), big, '压缩后解开要和原文一致');
+    const br = await fetch(base + '/assets/big.js', { headers: { 'accept-encoding': 'br, gzip' } });
+    assert.equal(br.headers.get('content-encoding'), 'br');
+    assert.equal(await br.text(), big);
+    const plain = await fetch(base + '/assets/big.js', { headers: { 'accept-encoding': 'identity' } });
+    assert.equal(plain.headers.get('content-encoding'), null);
     assert.match(home.headers.get('content-type') ?? '', /text\/html/);
     assert.match((await fetch(base + '/assets/a.js')).headers.get('cache-control') ?? '', /immutable/);
     assert.equal((await fetch(base + '/..%2Fsecret.txt')).status, 400);

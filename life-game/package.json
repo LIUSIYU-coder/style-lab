@@ -10,7 +10,8 @@
     "test": "node --test src/engine/*.test.ts server/*.test.ts",
     "typecheck": "tsc --noEmit",
     "start": "node server/main.ts",
-    "codes": "node scripts/codes.ts"
+    "codes": "node scripts/codes.ts",
+    "sample": "node scripts/make-sample.ts"
   },
   "dependencies": {
     "@fontsource/ma-shan-zheng": "^5.3.1",

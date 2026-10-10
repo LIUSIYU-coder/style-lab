@@ -15,6 +15,7 @@ import { buildReport, choiceOf, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Re
 import { MAX_YEAR, MIN_YEAR } from './engine/validate.ts';
 import { ageOn, CONCERNS, DEFAULT_READER, MAX_LINE, MAX_NAME, MAX_NICK, cleanText, whoOf, type Reader } from './engine/reader.ts';
 import type { DeepReport } from './engine/deep.ts';
+import sampleDeep from './sample-deep.json';
 import { clearSave, loadSave, writeSave } from './save.ts';
 import { esc } from './html.ts';
 import { SCENE_IMAGES, SHOP } from './config.ts';
@@ -94,10 +95,17 @@ function coverPage(): HTMLElement {
     <h1 class="label" tabindex="-1" data-focus>人生之书</h1>
     <div class="cover-mid">
       <span class="seal" aria-hidden="true">底层<br>代码</span>
-      <p class="sub">把一生放进一天<br>二十四小时 · 二十四个选择</p>
+      <p class="sub">把一生放进一天</p>
+      <ul class="cover-gets">
+        <li>清晨 6 点出生，走到第二天破晓</li>
+        <li>做 24 个选择，约 10 分钟</li>
+        <li>得到一张属于你的人生签</li>
+        <li>和一份写给你的《人生说明书》</li>
+      </ul>
       <button class="btn solid" type="button" id="open">翻开这本书</button>
       ${savedGame ? `<button class="btn light" type="button" id="resume">${savedGame.choices.length >= TOTAL_CHOICES ? '翻到书末，看看上次的一生' : `接着读 · 第 ${savedGame.choices.length + 1} 小时`}</button>` : ''}
-      <p class="hint">戴上耳机更好 · 大约十分钟</p>
+      <button class="link-btn" type="button" id="see-sample">先看看《人生说明书》长什么样</button>
+      <p class="hint">免费玩 · 不用注册 · 戴上耳机更好</p>
     </div>`);
   el.classList.add('cover');
   $('#open', el).onclick = () => {
@@ -105,8 +113,9 @@ function coverPage(): HTMLElement {
     $('#sound').hidden = false;
     Sound.chime(4);
     draft = { ...DEFAULT_READER, lines: {} };
-    book.turn(namePage());
+    book.turn(preludePage());
   };
+  $('#see-sample', el).onclick = () => openSample(() => readingMode(true));
   const resume = el.querySelector<HTMLButtonElement>('#resume');
   if (resume && savedGame)
     resume.onclick = () => {
@@ -117,6 +126,50 @@ function coverPage(): HTMLElement {
       else book.turn(nextPage(savedGame));
     };
   return el;
+}
+
+/* ---------------- 序幕:先看画,再落笔 ---------------- */
+
+function preludePage(): HTMLElement {
+  const el = book.page(`
+    <figure class="plate prelude-plate" role="img" aria-label="圆形月洞窗外是清晨的天空，窗边挂着一串旧风铃，木摇篮里伸出一只婴儿的手"></figure>
+    <div class="prose prelude-prose"></div>
+    <button class="btn solid start" type="button" id="write" hidden>落笔，写下你的故事</button>
+  `, { head: '序幕', cls: 'prelude' });
+  const plate = $('.plate', el);
+  const prose = $('.prose', el);
+  const state = newSceneState();
+  queueMicrotask(async () => {
+    const img = SCENE_IMAGES ? await new Promise<HTMLImageElement | null>(res => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => res(null);
+      im.src = 'scenes/birth.jpg';
+    }) : null;
+    book.onLeave(mountScene(plate, sceneDraw({ id: 'birth', place: 'home', hour: 6, rain: false }, state, img), reducedMotion()));
+    Sound.ambience('home', 6, false);
+    plate.onclick = () => { state.ring = 1; Sound.chime(2); };
+    setTimeout(() => { state.ring = 1; Sound.chime(3); }, 700);
+    await reveal(prose, ['清晨六点，一个孩子出生了。', '窗边挂着一串旧风铃。', '这本书，写的是你。']);
+    const go = $('#write', el);
+    go.hidden = false;
+    go.classList.add('ink-in');
+    go.onclick = () => book.turn(namePage());
+  });
+  return el;
+}
+
+/* ---------------- 样张 ---------------- */
+
+/** 打开《人生说明书》样张(示例读者的节选);看完回到 back */
+function openSample(back: () => void) {
+  readingMode(false);
+  const d = sampleDeep as unknown as DeepReport;
+  appendix.innerHTML = deepHtml(d, true);
+  window.scrollTo(0, 0);
+  bindDeep(appendix, d);
+  $<HTMLElement>('#deep-title').focus({ preventScroll: true });
+  $('#btn-deep-back').onclick = back;
 }
 
 /* ---------------- 扉页一:你是谁 ---------------- */
@@ -329,7 +382,7 @@ function prologuePage(g: Game): HTMLElement {
   queueMicrotask(async () => {
     Sound.ambience('home', 6, false);
     const box = $('.codelines', el);
-    await reveal(box, codeLines(chart, code), 'codeline');
+    await reveal(box, codeLines(chart, code), 'codeline', true);
     await wait(300);
     const chartBox = $('.chart-box', el);
     chartBox.hidden = false;
@@ -670,6 +723,7 @@ function unlockPanel(g: Game, age: number): string {
         <p class="blur" aria-hidden="true">${esc(blur)}</p>
       </div>
       <ul class="unlock-list">${LOCKED_ITEMS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+      <button class="link-btn dark" type="button" id="see-sample-2">先看一份样张</button>
       ${action}
       <p class="form-error" id="unlock-error" role="alert" hidden></p>
       <p class="hint">一个兑换码最多在 3 台设备上使用。换选法、换一个人重读，都能生成新的说明书。</p>
@@ -679,6 +733,7 @@ function unlockPanel(g: Game, age: number): string {
 
 function bindUnlock(g: Game) {
   const error = $('#unlock-error');
+  $('#see-sample-2').onclick = () => openSample(() => renderAppendix(g));
   const run = async (code: string, button: HTMLButtonElement) => {
     error.hidden = true;
     const key = gameKey(g);
@@ -788,6 +843,7 @@ function boot() {
   sheet.onclick = e => { if (e.target === sheet) closeSheet(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
   readingMode(true);
+  if (SCENE_IMAGES) new Image().src = 'scenes/birth.jpg';
   book.turn(coverPage(), false);
 }
 

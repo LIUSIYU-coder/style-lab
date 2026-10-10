@@ -31,7 +31,7 @@ export function novelText(d: DeepReport): string {
   ].join('\n');
 }
 
-export function deepHtml(d: DeepReport): string {
+export function deepHtml(d: DeepReport, sample = false): string {
   const toc = [
     ['now', '现在这一页'],
     ['rewrites', '六行深读'],
@@ -124,7 +124,8 @@ export function deepHtml(d: DeepReport): string {
     .join('');
 
   return `
-    <p class="eyebrow">书末附录 · 已解锁</p>
+    ${sample ? '<div class="sample-banner" role="note"><b>这是一份样张（节选）</b><span>用示例读者「小满」生成，只留了每一部分的开头几段，让你看看写得有多具体。你的那一份会用你自己的出生设定、扉页信息和 24 个选择生成，完整得多。</span></div>' : ''}
+    <p class="eyebrow">${sample ? '书末附录 · 样张' : '书末附录 · 已解锁'}</p>
     <h2 class="h2" id="deep-title" tabindex="-1">${esc(d.title)}</h2>
     <p class="lede">${esc(d.summary)}</p>
     <nav class="toc" aria-label="目录">${toc.map(([id, name]) => `<a href="#d-${id}">${name}</a>`).join('')}</nav>
@@ -188,10 +189,10 @@ export function deepHtml(d: DeepReport): string {
     </section>
 
     <div class="row center">
-      <button class="btn" type="button" id="btn-deep-back">回到书末附录</button>
-      <button class="btn" type="button" id="btn-deep-replay">重读一遍，换一种选法</button>
+      <button class="btn" type="button" id="btn-deep-back">${sample ? '看完了，回去' : '回到书末附录'}</button>
+      ${sample ? '' : '<button class="btn" type="button" id="btn-deep-replay">重读一遍，换一种选法</button>'}
     </div>
-    <p class="fine">人生说明书由你的出生设定、扉页信息和 24 个选择生成，是虚构的娱乐内容，不构成任何预测或建议。</p>
+    <p class="fine">${sample ? '样张内容为虚构示例，' : ''}人生说明书由你的出生设定、扉页信息和 24 个选择生成，是虚构的娱乐内容，不构成任何预测或建议。</p>
   `;
 }
 

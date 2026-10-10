@@ -70,7 +70,7 @@ function scrollIn(el: Element) {
 }
 
 /** 一句一句显出来;点一下页面就直接全部显出 */
-export async function reveal(container: HTMLElement, lines: string[], cls = '') {
+export async function reveal(container: HTMLElement, lines: string[], cls = '', fast = false) {
   let skip = false;
   const page = container.closest('.page');
   const onTap = (e: Event) => {
@@ -83,7 +83,7 @@ export async function reveal(container: HTMLElement, lines: string[], cls = '') 
     p.textContent = line;
     container.append(p);
     scrollIn(p);
-    if (!skip) await wait(Math.min(2600, 450 + line.length * 50));
+    if (!skip) await wait(fast ? 140 : Math.min(2600, 450 + line.length * 50));
   }
   page?.removeEventListener('pointerdown', onTap);
 }

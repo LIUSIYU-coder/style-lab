@@ -2,6 +2,7 @@
 // 不依赖任何第三方包,Node 22.18 以上可以直接运行 TypeScript。
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { brotliCompressSync, constants as zc, gzipSync } from 'node:zlib';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { computeChart } from '../src/engine/chart.ts';
@@ -190,6 +191,22 @@ export function createApp(opts: AppOptions): Server {
     }
   }
 
+  /** 文本类文件压缩后缓存,免费主机 CPU 很弱,每个文件只压一次 */
+  const compressed = new Map<string, { br?: Buffer; gz?: Buffer }>();
+  const TEXT = new Set(['.html', '.js', '.css', '.json', '.svg', '.txt']);
+  function encode(key: string, data: Buffer, accept: string): { body: Buffer; enc: string | null } {
+    if (data.length < 1024) return { body: data, enc: null };
+    let c = compressed.get(key);
+    if (!c) {
+      if (compressed.size > 200) compressed.clear();
+      c = {};
+      compressed.set(key, c);
+    }
+    if (/\bbr\b/.test(accept)) return { body: (c.br ??= brotliCompressSync(data, { params: { [zc.BROTLI_PARAM_QUALITY]: 5 } })), enc: 'br' };
+    if (/\bgzip\b/.test(accept)) return { body: (c.gz ??= gzipSync(data, { level: 6 })), enc: 'gzip' };
+    return { body: data, enc: null };
+  }
+
   async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
     let rel = decodeURIComponent(pathname);
     if (rel.endsWith('/')) rel += 'index.html';
@@ -203,13 +220,17 @@ export function createApp(opts: AppOptions): Server {
       if (!st.isFile()) throw new Error('not file');
       const data = await readFile(file);
       const ext = extname(file).toLowerCase();
+      const { body, enc } = TEXT.has(ext) ? encode(`${file}:${st.mtimeMs}`, data, String(req.headers['accept-encoding'] ?? '')) : { body: data, enc: null };
       res.writeHead(200, {
         'content-type': MIME[ext] ?? 'application/octet-stream',
         'cache-control': rel.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'no-referrer',
+        ...(enc ? { 'content-encoding': enc } : {}),
+        vary: 'accept-encoding',
+        'content-length': body.length,
       });
-      res.end(req.method === 'HEAD' ? undefined : data);
+      res.end(req.method === 'HEAD' ? undefined : body);
     } catch {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('页面不存在');
     }

@@ -8,6 +8,7 @@ import { buildReport, type Choice } from './report.ts';
 import { buildDeepReport, DEEP_TEXTS, missingProse, type DeepReport } from './deep.ts';
 import { BANNED } from './banned.ts';
 import { rng } from './rng.ts';
+import { readFileSync } from 'node:fs';
 
 function run(inp: BirthInput, rand: () => number, place: string | null, reader: Reader = { name: '', carer: '外婆', nick: '', friend: '', concern: null, lines: {} }, age = 30) {
   const chart = computeChart(inp);
@@ -89,4 +90,16 @@ test('选择不完整或编号无效时拒绝生成', () => {
   const g = run({ time: { year: 1999, month: 9, day: 9, hour: 9, minute: 9 }, gender: 'female', longitude: null }, rng(1), null);
   assert.throws(() => buildDeepReport({ ...g, picks: g.picks.slice(0, 23) }));
   assert.throws(() => buildDeepReport({ ...g, picks: [...g.picks.slice(0, 23), 'z'] }));
+});
+
+test('样张:结构完整、没有红线词、没有占位符,并且含有"过去 vs 想要"的反转', () => {
+  const sample = JSON.parse(readFileSync(new URL('../sample-deep.json', import.meta.url), 'utf8')) as DeepReport;
+  assert.ok(sample.title.includes('样张'));
+  assert.ok(sample.novel.length >= 1 && sample.rewrites.length >= 1 && sample.letter.length >= 3);
+  assert.ok(sample.shift && sample.shift.rows.some(r => r.changed), '样张要能看到至少一条方向变化');
+  assert.ok(sample.now.concern, '样张要展示"你最近在意的"');
+  for (const t of allText(sample)) {
+    assert.ok(!/[{}]|undefined|NaN/.test(t), `「${t}」有未替换的内容`);
+    for (const w of BANNED) assert.ok(!t.includes(w), `「${t}」含有「${w}」`);
+  }
 });
