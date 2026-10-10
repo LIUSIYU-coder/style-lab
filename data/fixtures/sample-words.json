@@ -1,0 +1,12 @@
+[
+  { "id": "fx-001", "hanzi": "你好", "pinyin": "nǐ hǎo", "meaningEn": "hello", "level": 1 },
+  { "id": "fx-002", "hanzi": "谢谢", "pinyin": "xièxie", "meaningEn": "thank you", "level": 1 },
+  { "id": "fx-003", "hanzi": "再见", "pinyin": "zàijiàn", "meaningEn": "goodbye", "level": 1 },
+  { "id": "fx-004", "hanzi": "我", "pinyin": "wǒ", "meaningEn": "I; me", "level": 1 },
+  { "id": "fx-005", "hanzi": "你", "pinyin": "nǐ", "meaningEn": "you", "level": 1 },
+  { "id": "fx-006", "hanzi": "是", "pinyin": "shì", "meaningEn": "to be", "level": 1 },
+  { "id": "fx-007", "hanzi": "不", "pinyin": "bù", "meaningEn": "not; no", "level": 1 },
+  { "id": "fx-008", "hanzi": "好", "pinyin": "hǎo", "meaningEn": "good", "level": 1 },
+  { "id": "fx-009", "hanzi": "爱", "pinyin": "ài", "meaningEn": "to love", "level": 1 },
+  { "id": "fx-010", "hanzi": "水", "pinyin": "shuǐ", "meaningEn": "water", "level": 1 }
+]

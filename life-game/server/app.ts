@@ -1,0 +1,263 @@
+// 网页服务器:托管打包好的网页(dist/),并提供兑换深度解析的接口。
+// 不依赖任何第三方包,Node 22.18 以上可以直接运行 TypeScript。
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { brotliCompressSync, constants as zc, gzipSync } from 'node:zlib';
+import { readFile, stat } from 'node:fs/promises';
+import { extname, join, normalize, sep } from 'node:path';
+import { computeChart } from '../src/engine/chart.ts';
+import { buildLifeCode } from '../src/engine/profile.ts';
+import { bornPhrase, replayStory, storyContext } from '../src/engine/story.ts';
+import { buildReport, choiceOf } from '../src/engine/report.ts';
+import { buildDeepReport } from '../src/engine/deep.ts';
+import { parseBirthInput, parsePicks, parsePlace } from '../src/engine/validate.ts';
+import { ageOn, parseReader, whoOf } from '../src/engine/reader.ts';
+import { CodeStore, isDeviceId, MAX_DEVICES, UpstashError } from './codes.ts';
+import { ADMIN_PAGE } from './admin-page.ts';
+
+export interface AppOptions {
+  store: CodeStore;
+  distDir: string;
+  /**
+   * 反向代理设置:true 表示前面只有一层自己的代理(Caddy),取 X-Forwarded-For 最右边的地址;
+   * 'first' 表示托管平台(Render 等)前面有多层代理,取最左边的地址。
+   */
+  trustProxy?: boolean | 'first';
+  /** 每个 IP 在一个时间窗口内允许输错兑换码的次数 */
+  maxFailures?: number;
+  failureWindowMs?: number;
+  /** 管理页密码;不设置则管理页关闭 */
+  adminToken?: string;
+  /** 卡密里写的网址;不设置则用请求里的域名 */
+  site?: string;
+}
+
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
+  '.woff2': 'font/woff2',
+};
+
+const ERRORS = {
+  invalid: '兑换码不对，请检查一下有没有输错（不区分大小写，横线可以不输）。',
+  disabled: '这个兑换码已经停用了。如有疑问，请联系卖家。',
+  devices: `这个兑换码已经在 ${MAX_DEVICES} 台设备上用过了。换了手机的话，请联系卖家帮你重置。`,
+  limited: '输错次数太多了，请过 15 分钟再试。',
+  bad: '请求有误，请刷新页面后重试。',
+  incomplete: '要先过完这一天的 24 个小时，才能生成深度解析。',
+} as const;
+
+function send(res: ServerResponse, status: number, body: unknown) {
+  const text = JSON.stringify(body);
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.end(text);
+}
+
+async function readBody(req: IncomingMessage, limit: number): Promise<string | null> {
+  let size = 0;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > limit) return null;
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+export function createApp(opts: AppOptions): Server {
+  const { store, distDir } = opts;
+  const maxFailures = opts.maxFailures ?? 8;
+  const windowMs = opts.failureWindowMs ?? 15 * 60_000;
+  const failures = new Map<string, { count: number; until: number }>();
+
+  const clientIp = (req: IncomingMessage) => {
+    if (opts.trustProxy) {
+      const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      if (fwd.length) return opts.trustProxy === 'first' ? fwd[0] : fwd[fwd.length - 1];
+    }
+    return req.socket.remoteAddress ?? 'unknown';
+  };
+
+  const limited = (ip: string) => {
+    const f = failures.get(ip);
+    if (!f) return false;
+    if (Date.now() > f.until) {
+      failures.delete(ip);
+      return false;
+    }
+    return f.count >= maxFailures;
+  };
+
+  const fail = (ip: string) => {
+    const now = Date.now();
+    const f = failures.get(ip);
+    if (!f || now > f.until) failures.set(ip, { count: 1, until: now + windowMs });
+    else f.count += 1;
+    if (failures.size > 10_000) for (const [k, v] of failures) if (now > v.until) failures.delete(k);
+  };
+
+  async function unlock(req: IncomingMessage, res: ServerResponse) {
+    const ip = clientIp(req);
+    if (limited(ip)) return send(res, 429, { ok: false, error: ERRORS.limited });
+    const raw = await readBody(req, 8 * 1024);
+    let parsed: unknown = null;
+    try {
+      parsed = raw ? JSON.parse(raw) : null;
+    } catch {
+      /* 当作无效请求 */
+    }
+    if (!parsed || typeof parsed !== 'object') return send(res, 400, { ok: false, error: ERRORS.bad });
+    const body = parsed as Record<string, unknown>;
+    const input = parseBirthInput(body.input);
+    const place = parsePlace(body.place);
+    const picks = parsePicks(body.picks, true);
+    const reader = parseReader(body.reader ?? { carer: '外婆' });
+    if (typeof body.code !== 'string' || !isDeviceId(body.device) || !input || place === undefined || !reader) {
+      return send(res, 400, { ok: false, error: ERRORS.bad });
+    }
+    if (!picks) return send(res, 400, { ok: false, error: ERRORS.incomplete });
+
+    // 先确认这局游戏能复现,再消耗兑换码的设备名额
+    let deep;
+    try {
+      const chart = computeChart(input);
+      const code = buildLifeCode(chart);
+      const ctx = storyContext(code.seed, place, whoOf(reader, bornPhrase(input.time.hour, input.unknownTime)));
+      const { steps } = replayStory(ctx, picks);
+      if (steps.length !== picks.length) return send(res, 400, { ok: false, error: ERRORS.incomplete });
+      const report = buildReport(chart, code, steps.map(s => choiceOf(s.resolved, s.option)), ageOn(input.time));
+      deep = buildDeepReport({ chart, code, ctx, picks, report, reader, age: ageOn(input.time) });
+    } catch {
+      return send(res, 400, { ok: false, error: ERRORS.bad });
+    }
+
+    const result = await store.redeem(body.code, body.device);
+    if (!result.ok) {
+      if (result.reason === 'invalid') fail(ip);
+      return send(res, result.reason === 'invalid' ? 403 : 409, { ok: false, reason: result.reason, error: ERRORS[result.reason] });
+    }
+    send(res, 200, { ok: true, devicesLeft: result.devicesLeft, deep });
+  }
+
+  const sameSecret = (a: string, b: string) => {
+    const ha = createHash('sha256').update(a).digest();
+    const hb = createHash('sha256').update(b).digest();
+    return timingSafeEqual(ha, hb);
+  };
+
+  async function admin(req: IncomingMessage, res: ServerResponse) {
+    const ip = clientIp(req);
+    if (limited(ip)) return send(res, 429, { ok: false, error: ERRORS.limited });
+    const raw = await readBody(req, 4 * 1024);
+    let body: Record<string, unknown> = {};
+    try {
+      body = raw ? JSON.parse(raw) : {};
+    } catch {
+      /* 空 */
+    }
+    if (!opts.adminToken || typeof body.token !== 'string' || !sameSecret(body.token, opts.adminToken)) {
+      fail(ip);
+      return send(res, 403, { ok: false, error: '管理密码不对。' });
+    }
+    const code = typeof body.code === 'string' ? body.code : '';
+    switch (body.action) {
+      case 'create': {
+        const count = Number(body.count);
+        const batch = typeof body.batch === 'string' && /^[\w-]{1,32}$/.test(body.batch) ? body.batch : new Date().toISOString().slice(0, 10);
+        if (!Number.isInteger(count) || count < 1 || count > 500) return send(res, 400, { ok: false, error: '数量要在 1 到 500 之间。' });
+        const codes = await store.create(count, batch);
+        const host = opts.site || String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '');
+        return send(res, 200, { ok: true, lines: codes.map(c => (host ? `网址 https://${host}  兑换码 ${c}` : c)) });
+      }
+      case 'check':
+        return send(res, 200, { ok: true, record: await store.info(code) });
+      case 'reset':
+        return send(res, 200, { ok: true, message: (await store.reset(code)) ? '已清空设备，买家可以在新手机上重新输入。' : '没有这个兑换码', record: await store.info(code) });
+      case 'disable':
+        return send(res, 200, { ok: true, message: (await store.disable(code)) ? '已作废。' : '没有这个兑换码', record: await store.info(code) });
+      case 'stats':
+        return send(res, 200, { ok: true, stats: await store.stats() });
+      default:
+        return send(res, 400, { ok: false, error: '未知操作。' });
+    }
+  }
+
+  /** 文本类文件压缩后缓存,免费主机 CPU 很弱,每个文件只压一次 */
+  const compressed = new Map<string, { br?: Buffer; gz?: Buffer }>();
+  const TEXT = new Set(['.html', '.js', '.css', '.json', '.svg', '.txt']);
+  function encode(key: string, data: Buffer, accept: string): { body: Buffer; enc: string | null } {
+    if (data.length < 1024) return { body: data, enc: null };
+    let c = compressed.get(key);
+    if (!c) {
+      if (compressed.size > 200) compressed.clear();
+      c = {};
+      compressed.set(key, c);
+    }
+    if (/\bbr\b/.test(accept)) return { body: (c.br ??= brotliCompressSync(data, { params: { [zc.BROTLI_PARAM_QUALITY]: 5 } })), enc: 'br' };
+    if (/\bgzip\b/.test(accept)) return { body: (c.gz ??= gzipSync(data, { level: 6 })), enc: 'gzip' };
+    return { body: data, enc: null };
+  }
+
+  async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: string) {
+    let rel = decodeURIComponent(pathname);
+    if (rel.endsWith('/')) rel += 'index.html';
+    const file = normalize(join(distDir, rel));
+    if (!file.startsWith(normalize(distDir) + sep)) {
+      res.writeHead(400).end();
+      return;
+    }
+    try {
+      const st = await stat(file);
+      if (!st.isFile()) throw new Error('not file');
+      const data = await readFile(file);
+      const ext = extname(file).toLowerCase();
+      const { body, enc } = TEXT.has(ext) ? encode(`${file}:${st.mtimeMs}`, data, String(req.headers['accept-encoding'] ?? '')) : { body: data, enc: null };
+      res.writeHead(200, {
+        'content-type': MIME[ext] ?? 'application/octet-stream',
+        'cache-control': rel.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : rel.startsWith('/scenes/') ? 'public, max-age=604800' : 'no-cache',
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
+        ...(enc ? { 'content-encoding': enc } : {}),
+        vary: 'accept-encoding',
+        'content-length': body.length,
+      });
+      res.end(req.method === 'HEAD' ? undefined : body);
+    } catch {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('页面不存在');
+    }
+  }
+
+  return createServer((req, res) => {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const done = (p: Promise<void>) => p.catch(err => {
+      console.error('请求出错:', err instanceof Error ? err.message : err);
+      if (res.headersSent) return void res.end();
+      const msg = err instanceof UpstashError ? err.message : '服务器开小差了，请稍后再试。';
+      send(res, 500, { ok: false, error: msg });
+    });
+    if (url.pathname === '/api/unlock') {
+      if (req.method !== 'POST') return send(res, 405, { ok: false, error: ERRORS.bad });
+      return done(unlock(req, res));
+    }
+    if (url.pathname === '/api/health') return send(res, 200, { ok: true });
+    if (url.pathname === '/api/admin' && opts.adminToken) {
+      if (req.method !== 'POST') return send(res, 405, { ok: false, error: ERRORS.bad });
+      return done(admin(req, res));
+    }
+    if (url.pathname === '/admin' && opts.adminToken) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'referrer-policy': 'no-referrer' });
+      return res.end(ADMIN_PAGE);
+    }
+    if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { ok: false, error: ERRORS.bad });
+    return done(serveStatic(req, res, url.pathname));
+  });
+}
