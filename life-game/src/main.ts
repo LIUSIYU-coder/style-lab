@@ -8,8 +8,8 @@ import { PROVINCES } from './engine/regions.ts';
 import { buildLifeCode, codeLines, type LifeCode } from './engine/profile.ts';
 import {
   agesLabel, AXES, AXIS_POLES, BEATS, beatIndexForAge, CARERS, clockLabel, environmentFor, initialFlags, replayStory,
-  resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, fill, timeKind, yearLabel, PICK_HINT, TIME_LABEL,
-  type Carer, type Effects, type ResolvedBeat, type StoryContext,
+  resolveBeat, shichen, STAGES, storyContext, TOTAL_CHOICES, fill, bornPhrase, birthPeriod, timeKind, yearLabel, PICK_HINT, TIME_LABEL,
+  type Carer, type ResolvedBeat, type StoryContext,
 } from './engine/story.ts';
 import { buildReport, choiceOf, LOCKED_ITEMS, METHOD_NOTES, type Choice, type Report } from './engine/report.ts';
 import { MAX_YEAR, MIN_YEAR } from './engine/validate.ts';
@@ -20,10 +20,15 @@ import { clearSave, loadSave, writeSave } from './save.ts';
 import { esc } from './html.ts';
 import { SCENE_IMAGES, SHOP } from './config.ts';
 import { forgetCode, savedCode, unlock } from './unlock.ts';
+import { SOURCES } from './engine/sources.ts';
+import { DAYUN_NOTE, ELEMENT_TRAIT, familyShares, HOW_TO_READ, KERNEL_LONG, PILLAR_NOTE, seasonOf, clockNote } from './engine/chart-text.ts';
+import { settingLeans } from './engine/report.ts';
+import { ELEMENTS } from './engine/chart.ts';
 import { bindDeep, deepHtml } from './deep-view.ts';
 import { shareImage } from './share-image.ts';
 import { append, Book, choose, gestureButton, hold, reducedMotion, reveal, swipeUp, taps } from './ui/book.ts';
-import { AFTER_IMAGE, mountScene, newSceneState, sceneDraw } from './ui/scenes.ts';
+import { AFTER_IMAGE, BIRTH_LIGHT_HOUR, BIRTH_TINT, makeLayer, mountScene, newSceneState, sceneDraw, type SceneArt } from './ui/scenes.ts';
+import lqip from './scenes-lqip.json';
 import { Sound } from './ui/sound.ts';
 import { propSvg } from './ui/props.ts';
 
@@ -57,7 +62,7 @@ let draft: Reader = { ...DEFAULT_READER, lines: {} };
 function newGame(input: BirthInput, place: string | null, reader: Reader, picks: string[] = []): Game {
   const chart = computeChart(input);
   const code = buildLifeCode(chart);
-  const ctx = storyContext(code.seed, place, whoOf(reader));
+  const ctx = storyContext(code.seed, place, whoOf(reader, bornPhrase(input.time.hour, input.unknownTime)));
   const g: Game = { input, place, reader, chart, code, ctx, flags: initialFlags(ctx), choices: [], picks: [] };
   for (const step of replayStory(ctx, picks).steps) record(g, step.resolved, step.resolved.options.indexOf(step.option));
   return g;
@@ -105,6 +110,7 @@ function coverPage(): HTMLElement {
       <button class="btn solid" type="button" id="open">翻开这本书</button>
       ${savedGame ? `<button class="btn light" type="button" id="resume">${savedGame.choices.length >= TOTAL_CHOICES ? '翻到书末，看看上次的一生' : `接着读 · 第 ${savedGame.choices.length + 1} 小时`}</button>` : ''}
       <button class="link-btn" type="button" id="see-sample">先看看《人生说明书》长什么样</button>
+      <button class="link-btn" type="button" id="see-sources">这本书的来历：设定、排盘与方法</button>
       <p class="hint">免费玩 · 不用注册 · 戴上耳机更好</p>
     </div>`);
   el.classList.add('cover');
@@ -116,6 +122,14 @@ function coverPage(): HTMLElement {
     book.turn(preludePage());
   };
   $('#see-sample', el).onclick = () => openSample(() => readingMode(true));
+  $('#see-sources', el).onclick = () => openSources(() => readingMode(true));
+  // 有封面插画(public/cover.webp)就换上;没有就保持布面封面
+  const art = new Image();
+  art.onload = () => {
+    el.style.setProperty('--cover-art', `url("${art.src}")`);
+    el.classList.add('has-art');
+  };
+  art.src = 'cover.webp';
   const resume = el.querySelector<HTMLButtonElement>('#resume');
   if (resume && savedGame)
     resume.onclick = () => {
@@ -128,11 +142,37 @@ function coverPage(): HTMLElement {
   return el;
 }
 
+/* ---------------- 插画 ---------------- */
+
+const LQIP = lqip as Record<string, string>;
+const sceneUrl = (id: string) => `scenes/${id}.webp`;
+
+/** 这一幕的插画(没开插画就返回 null,画面退回代码绘制) */
+function artFor(id: string, tint: SceneArt['tint'] = null): SceneArt | null {
+  if (!SCENE_IMAGES) return null;
+  return {
+    base: makeLayer(sceneUrl(id), LQIP[id]),
+    after: AFTER_IMAGE[id] ? makeLayer(sceneUrl(`${id}-after`), LQIP[`${id}-after`]) : null,
+    tint,
+  };
+}
+
+/** 在读当前这一页的时候,先把下一页的图拉下来 */
+const warmed = new Set<string>();
+function warm(id: string) {
+  if (!SCENE_IMAGES) return;
+  for (const name of AFTER_IMAGE[id] ? [id, `${id}-after`] : [id]) {
+    if (warmed.has(name)) continue;
+    warmed.add(name);
+    new Image().src = sceneUrl(name);
+  }
+}
+
 /* ---------------- 序幕:先看画,再落笔 ---------------- */
 
 function preludePage(): HTMLElement {
   const el = book.page(`
-    <figure class="plate prelude-plate" role="img" aria-label="圆形月洞窗外是清晨的天空，窗边挂着一串旧风铃，木摇篮里伸出一只婴儿的手"></figure>
+    <figure class="plate prelude-plate" role="img" aria-label="圆形月洞窗外是天空，窗边挂着一串旧风铃，木摇篮里伸出一只婴儿的手"></figure>
     <div class="prose prelude-prose"></div>
     <button class="btn solid start" type="button" id="write" hidden>落笔，写下你的故事</button>
   `, { head: '序幕', cls: 'prelude' });
@@ -140,17 +180,12 @@ function preludePage(): HTMLElement {
   const prose = $('.prose', el);
   const state = newSceneState();
   queueMicrotask(async () => {
-    const img = SCENE_IMAGES ? await new Promise<HTMLImageElement | null>(res => {
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = () => res(null);
-      im.src = 'scenes/birth.jpg';
-    }) : null;
-    book.onLeave(mountScene(plate, sceneDraw({ id: 'birth', place: 'home', hour: 6, rain: false }, state, img), reducedMotion()));
+    book.onLeave(mountScene(plate, sceneDraw({ id: 'birth', place: 'home', hour: 6, rain: false }, state, artFor('birth')), reducedMotion()));
     Sound.ambience('home', 6, false);
     plate.onclick = () => { state.ring = 1; Sound.chime(2); };
     setTimeout(() => { state.ring = 1; Sound.chime(3); }, 700);
-    await reveal(prose, ['清晨六点，一个孩子出生了。', '窗边挂着一串旧风铃。', '这本书，写的是你。']);
+    warm('hobby');
+    await reveal(prose, ['窗边挂着一串旧风铃。', '一个孩子出生了。', '这本书，写的是你。']);
     const go = $('#write', el);
     go.hidden = false;
     go.classList.add('ink-in');
@@ -170,6 +205,21 @@ function openSample(back: () => void) {
   bindDeep(appendix, d);
   $<HTMLElement>('#deep-title').focus({ preventScroll: true });
   $('#btn-deep-back').onclick = back;
+}
+
+/** 打开"这本书的来历"(理论与技术来源);看完回到 back */
+function openSources(back: () => void) {
+  readingMode(false);
+  appendix.innerHTML = `
+    <p class="eyebrow">书末附录</p>
+    <h2 class="h2" id="sources-title" tabindex="-1">这本书的来历</h2>
+    <p class="lede">它的设定从哪里来，排盘靠不靠谱，哪些话我们不说。</p>
+    ${SOURCES.map(b => `<section class="panel source"><div class="panel-title"><span>${esc(b.title)}</span></div>${b.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${(b.notes ?? []).map(n => `<p class="hint">${esc(n)}</p>`).join('')}</section>`).join('')}
+    <div class="row center"><button class="btn" type="button" id="btn-sources-back">看完了，回去</button></div>
+  `;
+  window.scrollTo(0, 0);
+  $<HTMLElement>('#sources-title').focus({ preventScroll: true });
+  $('#btn-sources-back').onclick = back;
 }
 
 /* ---------------- 扉页一:你是谁 ---------------- */
@@ -330,7 +380,7 @@ function birthPage(): HTMLElement {
       return;
     }
     const place = city.value ? (city.selectedOptions[0]?.text ?? null) : null;
-    game = newGame({ time: { ...date, hour: +tm[1], minute: +tm[2] }, gender, longitude: city.value ? Number(city.value) : null }, place, { ...draft });
+    game = newGame({ time: { ...date, hour: +tm[1], minute: +tm[2] }, gender, longitude: city.value ? Number(city.value) : null, ...(unknown.checked ? { unknownTime: true } : {}) }, place, { ...draft });
     save(game);
     book.turn(prologuePage(game));
   };
@@ -366,17 +416,17 @@ function prologuePage(g: Game): HTMLElement {
     <div class="codelines"></div>
     <div class="chart-box" hidden>
       ${pillarsHtml(chart)}
-      <p class="chart-cap">${esc(chart.lunarText)} · 生肖${esc(chart.zodiac)}</p>
-      <div class="kernel"><span class="k-glyph el-${chart.dayMaster.element}">${esc(chart.dayMaster.gan)}</span>
-        <div><b>日主 ${esc(code.kernel)} · ${esc(code.kernelTitle)}</b><p>意象是${esc(code.kernelImage)}。${esc(code.kernelDesc)}</p></div></div>
-      ${elementsHtml(code)}
-      <div class="duo-cards">
-        <div><span class="hint">天赋</span><b>${esc(code.talent.name)}</b><p>${esc(code.talent.desc)}</p></div>
-        <div><span class="hint">长进空间</span><b class="el-${code.patch.element}">${esc(code.patch.element)} · ${esc(code.patch.stat)}</b><p>${esc(code.patch.desc)}</p></div>
+      <p class="chart-cap">${esc(chart.lunarText)} · 生肖${esc(chart.zodiac)} · 日柱纳音「${esc(chart.pillars[2].naYin)}」</p>
+      <div class="explain">
+        <h3>怎么读这张盘</h3>
+        ${HOW_TO_READ.map(t => `<p>${esc(t)}</p>`).join('')}
+        <ul class="pillar-note">${PILLAR_NOTE.map(n => `<li><b>${n.label} · ${n.name}</b><span>${esc(n.text)}</span></li>`).join('')}</ul>
       </div>
-      <p class="yun-line"><span class="hint">大运</span> ${chart.daYun.slice(0, 8).map(d => `<span>${esc(d.ganZhi)}<small>${d.startAge}岁</small></span>`).join('')}</p>
-      <p class="closing">这些是这本书写给你的初始设定。接下来的二十四个小时，由你自己来写。</p>
-      <button class="btn solid start" type="button" id="go">翻到第一章</button>
+      <div class="kernel"><span class="k-glyph el-${chart.dayMaster.element}">${esc(chart.dayMaster.gan)}</span>
+        <div><b>你的日主：${esc(code.kernel)} · ${esc(code.kernelTitle)}</b><p class="hint">意象是${esc(code.kernelImage)}</p></div></div>
+      <p class="kernel-long">${esc(KERNEL_LONG[chart.dayMaster.gan] ?? code.kernelDesc)}</p>
+      <p class="chips"><span class="chip on">${esc(code.power.label)}</span><span class="chip">${esc(code.power.desc)}</span></p>
+      <button class="btn solid start" type="button" id="more">翻到下一页：你的五行与天赋</button>
     </div>
   `, { head: '序', folio: 3, cls: 'prologue' });
   queueMicrotask(async () => {
@@ -389,8 +439,53 @@ function prologuePage(g: Game): HTMLElement {
     chartBox.classList.add('ink-in');
     chartBox.scrollIntoView?.({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
     Sound.chime(2);
-    $('#go', el).onclick = () => book.turn(nextPage(g));
+    $('#more', el).onclick = () => book.turn(prologue2Page(g));
   });
+  return el;
+}
+
+function prologue2Page(g: Game): HTMLElement {
+  const { chart, code } = g;
+  const age = ageOn(g.input.time);
+  const strong = [...ELEMENTS].sort((a, b) => chart.elements[b] - chart.elements[a])[0];
+  const weak = chart.weakestElement;
+  const season = seasonOf(chart.pillars[1].zhi);
+  const fam = familyShares(chart);
+  const step = chart.daYun.find(d => age >= d.startAge && age <= d.endAge);
+  const env = environmentFor(chart, [age, age]);
+  const leans = settingLeans(chart);
+  const period = birthPeriod(g.input.time.hour, g.input.unknownTime);
+  const el = book.page(`
+    <h2 class="mid-brush" tabindex="-1" data-focus>序 · 你的五行与天赋</h2>
+    <section class="explain">
+      <h3>五行：你的能量分布</h3>
+      ${elementsHtml(code)}
+      <p><b class="el-${strong}">${strong} 最旺（${chart.elements[strong]}%）</b>：${esc(ELEMENT_TRAIT[strong].high)}</p>
+      <p><b class="el-${weak}">${weak} 最弱（${chart.elements[weak]}%）</b>：${esc(ELEMENT_TRAIT[weak].low)}</p>
+      <p class="hint">${esc(season.text)}</p>
+    </section>
+    <section class="explain">
+      <h3>十神：你的天赋偏向</h3>
+      <ul class="fam">${fam.map((f, i) => `<li><span>${esc(f.name)}</span><i><em class="${i === 0 ? 'top' : ''}" style="width:${Math.max(4, f.pct)}%"></em></i><small>${f.pct}%</small><span class="fam-hint">${esc(f.hint)}</span></li>`).join('')}</ul>
+      <p>你最突出的是「${esc(code.talent.name)}」：${esc(code.talent.desc)}</p>
+    </section>
+    <section class="explain">
+      <h3>六条初始倾向</h3>
+      <p class="hint">下面六对倾向，是你出生设定里的"默认值"。书里的二十四个选择，会让你顺着它写，还是改写它？</p>
+      <ul class="leans">${leans.map(l => `<li><span>${AXIS_POLES[l.axis].join(' / ')}</span><b>${l.sign === 0 ? '中立' : AXIS_POLES[l.axis][l.sign === 1 ? 0 : 1]}</b></li>`).join('')}</ul>
+    </section>
+    <section class="explain">
+      <h3>大运：每十年一章</h3>
+      <p class="yun-line">${chart.daYun.slice(0, 8).map(d => `<span class="${step === d ? 'cur' : ''}">${esc(d.ganZhi)}<small>${d.startAge}–${d.endAge}</small></span>`).join('')}</p>
+      <p>${step ? `你现在${age}岁，行「${esc(step.ganZhi)}」大运：${esc(env.relation)}` : esc(env.relation)}</p>
+      <p class="hint">${esc(DAYUN_NOTE)}</p>
+    </section>
+    <p class="closing">${esc(clockNote(period))}</p>
+    <p class="closing">这些是这本书写给你的初始设定。接下来的二十四个小时，由你自己来写。</p>
+    <button class="btn solid start" type="button" id="go">翻到第一章</button>
+  `, { head: '序', folio: 4, cls: 'prologue' });
+  el.querySelector('.explain')?.classList.add('ink-in');
+  $('#go', el).onclick = () => book.turn(nextPage(g));
   return el;
 }
 
@@ -423,10 +518,6 @@ function chapterPage(g: Game, si: number): HTMLElement {
   return el;
 }
 
-function effectStamps(e: Effects): string {
-  return AXES.filter(a => e[a]).map(a => `<span class="stamp">${AXIS_POLES[a][(e[a] ?? 0) > 0 ? 0 : 1]}</span>`).join('');
-}
-
 /** 按句号拆成一句句;结尾的"你——"并到上一句,不单独成行 */
 function sentences(text: string): string[] {
   const parts = (text.match(/[^。！？]+[。！？」"]*/g) ?? [text]).map(p => p.trim()).filter(Boolean);
@@ -448,6 +539,7 @@ function beatPage(g: Game): HTMLElement {
   const el = book.page(`
     <div class="when"><b>${clockLabel(beat.hour)}</b><span>${esc(shichen(beat.hour))} · ${esc(agesLabel(beat))}</span></div>
     <p class="era era-${kind}"><span class="era-tag">${TIME_LABEL[kind]}</span><span>${esc(year)}${kind === 'now' ? ' · 这一页的年纪，就是现在的你' : ''}</span></p>
+    ${r.index === 0 ? '<p class="era-note">书里的钟点从清晨 6 点开始，不是你真实的出生时间。</p>' : ''}
     <figure class="plate" role="img" aria-label="${esc(`${st.timeOfDay}，${agesLabel(beat)}的画面`)}">${propSvg(r.scene.prop)}</figure>
     <div class="prose"></div>
     <p class="footnote">注：这几年行「${esc(env.ganZhi)}」大运。${esc(env.relation)}</p>
@@ -455,22 +547,12 @@ function beatPage(g: Game): HTMLElement {
   const plate = $('.plate', el);
   const prose = $('.prose', el);
   const state = newSceneState();
-  const spec = { id: beat.id, place: beat.place, hour: beat.hour, rain: !!beat.rain };
+  const period = beat.id === 'birth' ? birthPeriod(g.input.time.hour, g.input.unknownTime) : null;
+  const spec = { id: beat.id, place: beat.place, hour: period ? BIRTH_LIGHT_HOUR[period] : beat.hour, rain: !!beat.rain };
 
   queueMicrotask(async () => {
-    const load = (src: string) =>
-      new Promise<HTMLImageElement | null>(res => {
-        const im = new Image();
-        im.onload = () => res(im);
-        im.onerror = () => res(null);
-        im.src = src;
-      });
-    let img: HTMLImageElement | null = null;
-    let after: HTMLImageElement | null = null;
-    if (SCENE_IMAGES) {
-      [img, after] = await Promise.all([load(`scenes/${beat.id}.jpg`), AFTER_IMAGE[beat.id] ? load(`scenes/${beat.id}-after.jpg`) : Promise.resolve(null)]);
-    }
-    book.onLeave(mountScene(plate, sceneDraw(spec, state, img, after), reducedMotion()));
+    book.onLeave(mountScene(plate, sceneDraw(spec, state, artFor(beat.id, period ? BIRTH_TINT[period] : null)), reducedMotion()));
+    if (r.index + 1 < TOTAL_CHOICES) warm(BEATS[r.index + 1].id);
     Sound.ambience(beat.place, beat.hour, !!beat.rain);
 
     // 开场的小动作
@@ -521,7 +603,7 @@ function beatPage(g: Game): HTMLElement {
     }
     record(g, r, i);
     save(g);
-    append(prose, `<div class="result ink-in"><p class="picked">你选择了：${esc(opt.text)}</p><p>${esc(opt.result)}</p><div class="stamps">${effectStamps(opt.effects)}</div></div>`);
+    append(prose, `<div class="result ink-in"><p class="picked">你选择了：${esc(opt.text)}</p><p>${esc(opt.result)}</p></div>`);
 
     if (r.write) {
       const w = r.write;
@@ -723,7 +805,7 @@ function unlockPanel(g: Game, age: number): string {
         <p class="blur" aria-hidden="true">${esc(blur)}</p>
       </div>
       <ul class="unlock-list">${LOCKED_ITEMS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-      <button class="link-btn dark" type="button" id="see-sample-2">先看一份样张</button>
+      <div class="row"><button class="link-btn dark" type="button" id="see-sample-2">先看一份样张</button><button class="link-btn dark" type="button" id="see-sources-2">这本书的来历</button></div>
       ${action}
       <p class="form-error" id="unlock-error" role="alert" hidden></p>
       <p class="hint">一个兑换码最多在 3 台设备上使用。换选法、换一个人重读，都能生成新的说明书。</p>
@@ -734,6 +816,7 @@ function unlockPanel(g: Game, age: number): string {
 function bindUnlock(g: Game) {
   const error = $('#unlock-error');
   $('#see-sample-2').onclick = () => openSample(() => renderAppendix(g));
+  $('#see-sources-2').onclick = () => openSources(() => renderAppendix(g));
   const run = async (code: string, button: HTMLButtonElement) => {
     error.hidden = true;
     const key = gameKey(g);
@@ -843,7 +926,7 @@ function boot() {
   sheet.onclick = e => { if (e.target === sheet) closeSheet(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
   readingMode(true);
-  if (SCENE_IMAGES) new Image().src = 'scenes/birth.jpg';
+  warm('birth');
   book.turn(coverPage(), false);
 }
 

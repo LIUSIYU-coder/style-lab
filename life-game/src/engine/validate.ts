@@ -18,7 +18,9 @@ export function parseBirthInput(x: unknown): BirthInput | null {
   if (o.gender !== 'male' && o.gender !== 'female') return null;
   const lng = o.longitude;
   if (lng !== null && !(typeof lng === 'number' && Number.isFinite(lng) && lng >= 70 && lng <= 140)) return null;
-  return { time: { year: t.year, month: t.month, day: t.day, hour: t.hour, minute: t.minute }, gender: o.gender, longitude: lng };
+  const out: BirthInput = { time: { year: t.year, month: t.month, day: t.day, hour: t.hour, minute: t.minute }, gender: o.gender, longitude: lng };
+  if (o.unknownTime === true) out.unknownTime = true;
+  return out;
 }
 
 /** 出生城市名:不填为 null;无效时返回 undefined */

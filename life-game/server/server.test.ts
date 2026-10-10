@@ -111,7 +111,8 @@ test('接口:兑换深度解析、静态文件、限流', async () => {
     assert.equal(data.ok, true);
     assert.equal(data.devicesLeft, MAX_DEVICES - 1);
     assert.equal(data.deep.novel.length, 5);
-    assert.ok(data.deep.novel[0].paragraphs[1].startsWith('成都的一个清晨'));
+    assert.ok(data.deep.novel[0].paragraphs[1].startsWith('成都的一个下午'), '出生在下午,第一章就该写下午');
+    assert.ok(!data.deep.novel[0].paragraphs[0].includes('清晨'), '章首也不能再写清晨');
 
     assert.equal((await post({ code, device: 'device-aaaa', input, place: '成都', picks: picks.slice(0, 10) })).status, 400);
     assert.equal((await post({ code, device: 'x', input, place: null, picks })).status, 400);

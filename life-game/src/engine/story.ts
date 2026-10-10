@@ -89,7 +89,7 @@ export interface Stage {
 }
 
 export const STAGES: readonly Stage[] = [
-  { name: '童年', timeOfDay: '清晨', shichen: '卯时到巳时', epigraph: '故事从{home}的一个清晨开始。那时候天很亮，日子很长，{carer}的风铃挂在窗边。' },
+  { name: '童年', timeOfDay: '清晨', shichen: '卯时到巳时', epigraph: '故事从{home}的{born}开始。那时候日子很长，{carer}的风铃挂在窗边。' },
   { name: '青春', timeOfDay: '午后', shichen: '午时到申时', epigraph: '午后的太阳晒得人发懒，可这几年你一点也不懒：在长个子，也在长主意。' },
   { name: '而立', timeOfDay: '傍晚', shichen: '酉时到亥时', epigraph: '城市的灯一盏盏亮起来。你开始自己付房租、自己拿主意，也开始知道，选择是有代价的。' },
   { name: '中年', timeOfDay: '深夜', shichen: '子时到丑时', epigraph: '夜深了。年轻时以为很远的事，一件件走到了眼前。' },
@@ -119,8 +119,8 @@ export const BEATS: readonly Beat[] = [
     id: 'birth', hour: 6, ages: [0, 2], stage: 0, place: 'home', prop: 'chime',
     gesture: { kind: 'tap', label: '轻点一下，让窗边的风铃响起来' },
     text: [
-      ['parent', '{home}的一个清晨，你出生了。家里不宽裕，大部分时间是{carer}一个人带着你。{ta}在窗边挂了一串旧风铃，说这样你每天睁开眼，第一眼就能看到光。你——'],
-      [null, '{home}的一个清晨，你出生了。爸妈白天都要上班，你是{carer}带大的。{ta}在窗边挂了一串旧风铃，说这样你每天睁开眼，第一眼就能看到光。你——'],
+      ['parent', '{home}的{born}，你出生了。家里不宽裕，大部分时间是{carer}一个人带着你。{ta}在窗边挂了一串旧风铃，说这样你每天睁开眼，第一眼就能看到光。你——'],
+      [null, '{home}的{born}，你出生了。爸妈白天都要上班，你是{carer}带大的。{ta}在窗边挂了一串旧风铃，说这样你每天睁开眼，第一眼就能看到光。你——'],
     ],
     options: [
       o('a', '伸手去抓那串叮当响的风铃', [['nick', '风铃被你扯得乱响，{carer}赶紧把它挂高了一点，嘴上念叨：{nick}啊，你这孩子，胆子真大。'], [null, '风铃被你扯得乱响，{carer}赶紧把它挂高了一点，嘴上念叨：这孩子，胆子大。']], { act: 1, risk: 1 }),
@@ -449,6 +449,27 @@ export interface StoryContext {
   carer: Carer;
   /** 家里人怎么叫你(小名),没填为空 */
   nick: string;
+  /** 按真实出生时段写的"一个下午""某一天",用在第一幕和第一章的开头 */
+  born: string;
+}
+
+/** 真实出生钟点属于一天里的哪一段;不知道钟点时返回 null */
+export function birthPeriod(hour: number, unknown = false): BirthPeriod | null {
+  if (unknown) return null;
+  if (hour < 5) return '凌晨';
+  if (hour < 8) return '清晨';
+  if (hour < 11) return '上午';
+  if (hour < 13) return '中午';
+  if (hour < 17) return '下午';
+  if (hour < 19) return '傍晚';
+  return '夜晚';
+}
+export type BirthPeriod = '凌晨' | '清晨' | '上午' | '中午' | '下午' | '傍晚' | '夜晚';
+
+/** "一个下午";不知道时是"某一天" */
+export function bornPhrase(hour: number, unknown = false): string {
+  const p = birthPeriod(hour, unknown);
+  return p ? `一个${p}` : '某一天';
 }
 
 export const CARERS = ['外婆', '奶奶', '外公', '爷爷', '妈妈', '爸爸'] as const;
@@ -471,6 +492,8 @@ export interface WhoYouAre {
   /** 玩家填的最好朋友的名字,没填就按种子挑一个 */
   friend?: string;
   nick?: string;
+  /** 见 bornPhrase;不传就是"一个清晨" */
+  born?: string;
 }
 
 /** 朋友的名字和远方的城市按种子固定;家乡用玩家填的出生地,没填就是"小城"。 */
@@ -483,6 +506,7 @@ export function storyContext(seed: number, placeName: string | null, who: WhoYou
     home: placeName ? placeName.replace(/(市|区|县|自治州|地区|盟)$/, '') : '小城',
     carer: who.carer,
     nick: who.nick ?? '',
+    born: who.born ?? '一个清晨',
   };
 }
 
@@ -501,6 +525,7 @@ export function fill(line: Line, ctx: StoryContext, flags: ReadonlySet<string>):
   const hobby = HOBBIES[hobbyOf(flags)];
   const city = flags.has('left') && !flags.has('back') ? ctx.far : ctx.home;
   return text
+    .replaceAll('{born}', ctx.born)
     .replaceAll('{nick}', ctx.nick)
     .replaceAll('{carer}', ctx.carer)
     .replaceAll('{ta}', CARER_TA[ctx.carer])

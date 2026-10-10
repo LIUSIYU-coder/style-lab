@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeChart, type BirthInput } from './chart.ts';
 import { buildLifeCode } from './profile.ts';
-import { agesLabel, CARERS, initialFlags, resolveBeat, storyContext, TOTAL_CHOICES } from './story.ts';
+import { agesLabel, bornPhrase, CARERS, initialFlags, resolveBeat, storyContext, TOTAL_CHOICES } from './story.ts';
 import { CONCERNS, whoOf, type Reader } from './reader.ts';
 import { buildReport, type Choice } from './report.ts';
 import { buildDeepReport, DEEP_TEXTS, missingProse, type DeepReport } from './deep.ts';
@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 function run(inp: BirthInput, rand: () => number, place: string | null, reader: Reader = { name: '', carer: '外婆', nick: '', friend: '', concern: null, lines: {} }, age = 30) {
   const chart = computeChart(inp);
   const code = buildLifeCode(chart);
-  const ctx = storyContext(code.seed, place, whoOf(reader));
+  const ctx = storyContext(code.seed, place, whoOf(reader, bornPhrase(inp.time.hour, inp.unknownTime)));
   const flags = initialFlags(ctx);
   const picks: string[] = [];
   const choices: Choice[] = [];

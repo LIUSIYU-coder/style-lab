@@ -125,11 +125,11 @@ magick input.png -resize 1600x1200^ -gravity center -extent 1600x1200 -strip -qu
 
 ## 六、放进项目（如果你能改这个仓库）
 
-1. 把 28 张图放进 `life-game/public/scenes/`。
-2. 打开 `life-game/src/config.ts`，把 `export const SCENE_IMAGES = false;` 改成 `true`。
-3. 在 `life-game` 目录运行 `npm ci && npm test && npm run build` 确认能构建。
+1. 把 28 张 JPG（1600×1200）放进 `life-game/art/scenes-src/`。
+2. 在 `life-game` 目录运行 `python3 scripts/optimize-scenes.py`（需要 `pip install pillow`）。它会生成：
+   - `public/scenes/*.webp`：网页真正加载的图（约 85KB 一张，加载更快）
+   - `src/scenes-lqip.json`：每张图的模糊占位图（翻到新一页时画面立刻出现，大图再淡入）
+3. 确认 `src/config.ts` 里 `SCENE_IMAGES` 是 `true`，运行 `npm ci && npm test && npm run build`。
 4. 提交并推送到 `claude/admiring-knuth-vw1v8f` 分支。
 
-如果你不能改仓库，把 28 张图打包成一个 zip 发给我就行。
-
-缺了某一张也没关系，那一页会自动退回原来的代码画面，不会出现破图。谢谢！
+如果你不能改仓库，把 28 张图打包成一个 zip 发给我就行。缺了某一张也没关系，那一页会自动退回原来的代码画面，不会出现破图。谢谢！

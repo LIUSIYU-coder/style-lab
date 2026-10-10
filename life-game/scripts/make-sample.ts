@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { computeChart } from '../src/engine/chart.ts';
 import { buildLifeCode } from '../src/engine/profile.ts';
-import { initialFlags, replayStory, resolveBeat, storyContext, TOTAL_CHOICES } from '../src/engine/story.ts';
+import { bornPhrase, initialFlags, replayStory, resolveBeat, storyContext, TOTAL_CHOICES } from '../src/engine/story.ts';
 import { buildReport, choiceOf } from '../src/engine/report.ts';
 import { buildDeepReport } from '../src/engine/deep.ts';
 import { whoOf, type Reader } from '../src/engine/reader.ts';
@@ -16,7 +16,7 @@ const age = 28;
 
 const chart = computeChart(input);
 const code = buildLifeCode(chart);
-const ctx = storyContext(code.seed, '成都市', whoOf(reader));
+const ctx = storyContext(code.seed, '成都市', whoOf(reader, bornPhrase(input.time.hour)));
 const flags = initialFlags(ctx);
 // 固定的"选择方式":回忆页偏稳妥一点的选项,设想页偏敢闯的选项,这样样张里能看到"过去和想要的不一样"。
 // 具体编号由 SAMPLE_RULE 决定,换规则后重新运行即可。

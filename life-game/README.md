@@ -56,6 +56,8 @@ npm run codes -- make 10 test   # 生成 10 个测试兑换码,保存在 data/co
 | `src/ui/book.ts` | 翻页、逐句显现、手势(长按 / 轻点 / 上滑)、选项 |
 | `src/ui/scenes.ts` | 九种地点的 Canvas 动态画面,光线随钟点变化,回应手势 |
 | `src/ui/sound.ts` | Web Audio 现场合成的环境声和音效 |
+| `src/engine/chart-text.ts` | 序页的免费解说:怎么读四柱、十个日主、五行最旺最弱、季节、十神占比、大运 |
+| `src/engine/sources.ts` | "这本书的来历"页:设定与排盘的来源、选择画像的借鉴、做不到的事(只写能核实的) |
 | `src/engine/reader.ts` | 扉页信息(称呼、带大你的人、小名、朋友名)、现实困惑、亲手写的话、真实年龄 |
 | `server/` | 兑换服务器(`app.ts` 接口、管理接口与静态文件,`codes.ts` 兑换码仓库:本机文件或 Upstash,`admin-page.ts` 管理页) |
 | `scripts/make-sample.ts` | 生成《人生说明书》样张节选(`npm run sample`,写入 `src/sample-deep.json`),封面和解锁区的"看样张"用它;改了 `deep.ts` 的文案后要重新运行 |
@@ -91,7 +93,8 @@ npm run codes -- make 10 test   # 生成 10 个测试兑换码,保存在 data/co
 ## 已知限制 / 下一步
 
 - 剧情是一条主线加若干分支,重玩换选法会走到不同的分支,但主线场景是固定的。
-- 场景插画共 28 张(`public/scenes/`,`SCENE_IMAGES` 已开启);缺图时自动退回代码画的画面。生图规格见 `docs/image-brief.md`。
+- 场景插画共 28 张:原图(1600×1200 JPG)在 `art/scenes-src/`,运行 `python3 scripts/optimize-scenes.py` 生成网页用的 `public/scenes/*.webp`(约 85KB 一张)和 `src/scenes-lqip.json`(模糊占位图,翻页时画面立刻出现、大图再淡入);缺图时自动退回代码画的画面。生图规格见 `docs/image-brief.md`。
+- 封面插画是可选的:`art/cover-src/cover.jpg` → `public/cover.webp`(同一个脚本生成),没有就用布面封面。生图规格见 `docs/image-brief-cover.md`。
 - 兑换码数据是一个 JSON 文件,适合单台服务器、每天几千次以内的兑换量。
 
 ## 第三方

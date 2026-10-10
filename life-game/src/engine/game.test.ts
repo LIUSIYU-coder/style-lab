@@ -5,6 +5,9 @@ import { buildLifeCode, codeLines, TALENTS } from './profile.ts';
 import { agesLabel, AXES, BEATS, clockLabel, initialFlags, replayStory, resolveBeat, shichen, STAGES, storyContext, timeKind, TOTAL_CHOICES, yearLabel, type WhoYouAre } from './story.ts';
 import { ARCHETYPES, BALANCED, buildReport, LOCKED_ITEMS, METHOD_NOTES, splitByTime, type Choice } from './report.ts';
 import { parseReader } from './reader.ts';
+import { parseBirthInput } from './validate.ts';
+import { birthPeriod, bornPhrase } from './story.ts';
+import { familyShares, seasonOf, KERNEL_LONG, ELEMENT_TRAIT, clockNote } from './chart-text.ts';
 import { rng } from './rng.ts';
 import { BANNED } from './banned.ts';
 
@@ -220,4 +223,44 @@ test('读者信息:小名和朋友名被清理,旧存档缺字段时用空值', 
   assert.equal(old?.nick, '');
   assert.equal(old?.friend, '');
   assert.equal(parseReader({ carer: '邻居' }), null);
+});
+
+test('按真实出生时段写第一幕:下午出生不会再写清晨;不知道钟点时写"某一天"', () => {
+  assert.equal(bornPhrase(14), '一个下午');
+  assert.equal(bornPhrase(6), '一个清晨');
+  assert.equal(bornPhrase(2), '一个凌晨');
+  assert.equal(bornPhrase(22), '一个夜晚');
+  assert.equal(bornPhrase(12, true), '某一天');
+  assert.equal(birthPeriod(12, true), null);
+  const hours = [0, 4, 5, 7, 8, 10, 11, 12, 13, 16, 17, 18, 19, 23];
+  for (const h of hours) {
+    const run = play(input(1996, 3, 8, h, 0), () => 0, '成都市', { carer: '外婆', born: bornPhrase(h) });
+    assert.ok(run.texts[0].startsWith(`成都的${bornPhrase(h)}，你出生了`), run.texts[0].slice(0, 20));
+    if (h >= 8 && h <= 23) assert.ok(!run.texts[0].includes('清晨'), '白天或夜里出生的第一幕不该有"清晨"');
+  }
+  // 第一章章首同样跟着变
+  assert.ok(STAGES[0].epigraph.includes('{born}') && !STAGES[0].epigraph.includes('清晨'));
+});
+
+test('unknownTime 能通过校验并保留;乱写的值被忽略', () => {
+  const base = { time: { year: 1990, month: 5, day: 5, hour: 12, minute: 0 }, gender: 'male', longitude: null };
+  assert.equal(parseBirthInput({ ...base, unknownTime: true })?.unknownTime, true);
+  assert.equal(parseBirthInput({ ...base, unknownTime: 'yes' })?.unknownTime, undefined);
+  assert.equal(parseBirthInput(base)?.unknownTime, undefined);
+});
+
+test('序页解说:十个日主、五行、季节、十神占比都有内容且不含红线词', () => {
+  assert.equal(Object.keys(KERNEL_LONG).length, 10);
+  const texts: string[] = [...Object.values(KERNEL_LONG), ...Object.values(ELEMENT_TRAIT).flatMap(e => [e.high, e.low]), ...'寅巳申亥'.split('').map(z => seasonOf(z).text), clockNote('下午'), clockNote(null)];
+  for (const t of texts) for (const w of BANNED) assert.ok(!t.includes(w), `「${t}」含有「${w}」`);
+  assert.equal(seasonOf('卯').name, '春');
+  assert.equal(seasonOf('午').name, '夏');
+  assert.equal(seasonOf('酉').name, '秋');
+  assert.equal(seasonOf('子').name, '冬');
+  for (const y of [1970, 1988, 2001]) {
+    const shares = familyShares(computeChart(input(y, 6, 15, 10, 0)));
+    assert.equal(shares.length, 5);
+    assert.ok(Math.abs(shares.reduce((n, f) => n + f.pct, 0) - 100) <= 3, '占比合计约 100');
+    assert.ok(shares[0].pct >= shares[4].pct);
+  }
 });

@@ -55,5 +55,5 @@ export function ageOn(birth: { year: number; month: number; day: number }, today
   return Math.max(0, age);
 }
 
-/** 书里用的"你是谁":把扉页信息交给剧情 */
-export const whoOf = (r: Reader) => ({ carer: r.carer, friend: r.friend || undefined, nick: r.nick || undefined });
+/** 书里用的"你是谁":把扉页信息和真实出生时段交给剧情 */
+export const whoOf = (r: Reader, born?: string) => ({ carer: r.carer, friend: r.friend || undefined, nick: r.nick || undefined, born });

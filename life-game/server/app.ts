@@ -7,7 +7,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { computeChart } from '../src/engine/chart.ts';
 import { buildLifeCode } from '../src/engine/profile.ts';
-import { replayStory, storyContext } from '../src/engine/story.ts';
+import { bornPhrase, replayStory, storyContext } from '../src/engine/story.ts';
 import { buildReport, choiceOf } from '../src/engine/report.ts';
 import { buildDeepReport } from '../src/engine/deep.ts';
 import { parseBirthInput, parsePicks, parsePlace } from '../src/engine/validate.ts';
@@ -131,7 +131,7 @@ export function createApp(opts: AppOptions): Server {
     try {
       const chart = computeChart(input);
       const code = buildLifeCode(chart);
-      const ctx = storyContext(code.seed, place, whoOf(reader));
+      const ctx = storyContext(code.seed, place, whoOf(reader, bornPhrase(input.time.hour, input.unknownTime)));
       const { steps } = replayStory(ctx, picks);
       if (steps.length !== picks.length) return send(res, 400, { ok: false, error: ERRORS.incomplete });
       const report = buildReport(chart, code, steps.map(s => choiceOf(s.resolved, s.option)), ageOn(input.time));
@@ -223,7 +223,7 @@ export function createApp(opts: AppOptions): Server {
       const { body, enc } = TEXT.has(ext) ? encode(`${file}:${st.mtimeMs}`, data, String(req.headers['accept-encoding'] ?? '')) : { body: data, enc: null };
       res.writeHead(200, {
         'content-type': MIME[ext] ?? 'application/octet-stream',
-        'cache-control': rel.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+        'cache-control': rel.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : rel.startsWith('/scenes/') ? 'public, max-age=604800' : 'no-cache',
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'no-referrer',
         ...(enc ? { 'content-encoding': enc } : {}),

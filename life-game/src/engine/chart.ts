@@ -100,6 +100,8 @@ export interface BirthInput {
   gender: Gender;
   /** 出生地经度;null 表示不做真太阳时校正 */
   longitude: number | null;
+  /** 玩家说不清具体时间(这时 time 里的钟点是按中午补的,不能当成真实出生时段) */
+  unknownTime?: boolean;
 }
 
 export function computeChart(input: BirthInput): Chart {

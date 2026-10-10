@@ -711,23 +711,90 @@ const STEAM_AT: Record<string, [number, number]> = {
   stall: [0.28, 0.5],
 };
 
-/** 用插画时:插画铺底,上面叠雨、热气、烟花这些动态层 */
-function overlayOnly(spec: SceneSpec, s: SceneState, img: HTMLImageElement, after: HTMLImageElement | null): Draw {
+/** 一张插画的两层:极小的模糊占位图(几乎立刻就有)和大图(下载好后淡入) */
+export interface ImageLayer {
+  lqip: HTMLImageElement | null;
+  full: HTMLImageElement | null;
+  /** 大图开始淡入的时刻(画面时钟,秒) */
+  at: number | null;
+}
+
+export function makeLayer(src: string, lqipUri?: string): ImageLayer {
+  const layer: ImageLayer = { lqip: null, full: null, at: null };
+  if (lqipUri) {
+    const im = new Image();
+    im.src = lqipUri;
+    layer.lqip = im;
+  }
+  const full = new Image();
+  full.src = src;
+  const ready = () => { layer.full = full; };
+  if (typeof full.decode === 'function') full.decode().then(ready, () => { /* 加载失败就一直用占位图 */ });
+  else full.onload = ready;
+  return layer;
+}
+
+/** 按这一页的出生时段给第一幕的画面调色(出生在清晨的人看到的是原图) */
+export interface Tint { color: string; alpha: number }
+export const BIRTH_TINT: Record<string, Tint | null> = {
+  凌晨: { color: '70,84,140', alpha: 0.55 },
+  清晨: null,
+  上午: null,
+  中午: null,
+  下午: { color: '255,214,140', alpha: 0.5 },
+  傍晚: { color: '255,140,95', alpha: 0.55 },
+  夜晚: { color: '58,70,128', alpha: 0.62 },
+};
+/** 代码画面(没有插画时)用的代表钟点 */
+export const BIRTH_LIGHT_HOUR: Record<string, number> = { 凌晨: 3, 清晨: 6, 上午: 9, 中午: 12, 下午: 15, 傍晚: 18, 夜晚: 21 };
+
+export interface SceneArt {
+  base: ImageLayer;
+  after?: ImageLayer | null;
+  tint?: Tint | null;
+}
+
+function coverDraw(ctx: Ctx, im: HTMLImageElement, w: number, h: number) {
+  const ir = im.naturalWidth / im.naturalHeight, cr = w / h;
+  const dw = ir > cr ? h * ir : w, dh = ir > cr ? h : w / ir;
+  ctx.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+
+/** 用插画时:先铺模糊占位,大图好了就淡入;上面再叠雨、热气、烟花这些动态层 */
+function overlayOnly(spec: SceneSpec, s: SceneState, art: SceneArt): Draw {
   const rain = makeRain(120);
   const steam = makeSteam();
   const fw = makeFireworks();
-  const cover = (ctx: Ctx, im: HTMLImageElement, w: number, h: number) => {
-    const ir = im.naturalWidth / im.naturalHeight, cr = w / h;
-    const dw = ir > cr ? h * ir : w, dh = ir > cr ? h : w / ir;
-    ctx.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  let fallback: Draw | null = null;
+  const drawLayer = (ctx: Ctx, L: ImageLayer, w: number, h: number, t: number, alpha: number): boolean => {
+    let drew = false;
+    if (L.lqip && L.lqip.complete && L.lqip.naturalWidth) {
+      ctx.globalAlpha = alpha;
+      coverDraw(ctx, L.lqip, w, h);
+      drew = true;
+    }
+    if (L.full) {
+      L.at ??= t;
+      ctx.globalAlpha = alpha * Math.min(1, (t - L.at) / 0.6);
+      coverDraw(ctx, L.full, w, h);
+      drew = true;
+    }
+    ctx.globalAlpha = 1;
+    return drew;
   };
   return (ctx, w, h, t) => {
-    cover(ctx, img, w, h);
-    const p = after && AFTER_IMAGE[spec.id] ? AFTER_IMAGE[spec.id](s) : 0;
-    if (after && p > 0) {
-      ctx.globalAlpha = Math.min(1, p);
-      cover(ctx, after, w, h);
-      ctx.globalAlpha = 1;
+    if (!drawLayer(ctx, art.base, w, h, t, 1)) {
+      // 占位图也还没解码好的头几帧:先用代码画的场景垫一下
+      fallback ??= PLACES[spec.place](spec, s);
+      fallback(ctx, w, h, t);
+    }
+    const p = art.after && AFTER_IMAGE[spec.id] ? AFTER_IMAGE[spec.id](s) : 0;
+    if (art.after && p > 0) drawLayer(ctx, art.after, w, h, t, Math.min(1, p));
+    if (art.tint) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgba(${art.tint.color},${art.tint.alpha})`;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
     }
     if (spec.id === 'newyear') fw(ctx, w, h * 0.6, t, s.lit > 0.5);
     s.wind *= 0.95;
@@ -737,8 +804,8 @@ function overlayOnly(spec: SceneSpec, s: SceneState, img: HTMLImageElement, afte
   };
 }
 
-export function sceneDraw(spec: SceneSpec, s: SceneState, img?: HTMLImageElement | null, after?: HTMLImageElement | null): Draw {
-  return img ? overlayOnly(spec, s, img, after ?? null) : PLACES[spec.place](spec, s);
+export function sceneDraw(spec: SceneSpec, s: SceneState, art?: SceneArt | null): Draw {
+  return art ? overlayOnly(spec, s, art) : PLACES[spec.place](spec, s);
 }
 
 /** 把画面挂到一个容器上,返回停止函数 */
