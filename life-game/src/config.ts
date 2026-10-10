@@ -11,4 +11,4 @@ export const SHOP = {
 export const UNLOCK_API = 'api/unlock';
 
 /** 把 24 张场景插画放进 public/scenes/（文件名见 docs/scene-prompts.md）后改成 true；没放图时保持 false，用内置的矢量画面 */
-export const SCENE_IMAGES = false;
+export const SCENE_IMAGES = true;
