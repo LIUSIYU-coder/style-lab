@@ -202,7 +202,7 @@ export async function shareImage(d: ShareData): Promise<string> {
   ctx.setLineDash([]);
   ctx.fillStyle = C.ink;
   ctx.font = `44px ${BRUSH}`;
-  ctx.fillText('人生之书', left, fy + 38);
+  ctx.fillText('二十四时', left, fy + 38);
   ctx.fillStyle = C.soft;
   ctx.font = `24px ${UI}`;
   ctx.fillText(`生于${d.home} · 二十四小时，二十四个选择`, left + 200, fy + 32);
@@ -210,7 +210,7 @@ export async function shareImage(d: ShareData): Promise<string> {
   ctx.fillStyle = '#c9b98f';
   ctx.textAlign = 'center';
   ctx.font = `28px ${UI}`;
-  ctx.fillText(d.site ? `翻开你的人生之书：${d.site}` : '剧情与分析均为虚构的娱乐内容', W / 2, H - 70);
+  ctx.fillText(d.site ? `翻开《二十四时》：${d.site}` : '剧情与分析均为虚构的娱乐内容', W / 2, H - 70);
   ctx.textAlign = 'left';
 
   return canvas.toDataURL('image/png');

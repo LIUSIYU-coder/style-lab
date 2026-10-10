@@ -1,4 +1,4 @@
-// 人生之书:封面 → 扉页(真实的你)→ 序(出生设定)→ 五章二十四小时 → 跋 → 书末附录(报告与人生说明书)。
+// 二十四时:封面 → 扉页(真实的你)→ 序(出生设定)→ 五章二十四小时 → 跋 → 书末附录(报告与人生说明书)。
 import 'lxgw-wenkai-screen-webfont/lxgwwenkaigbscreen.css';
 import '@fontsource/ma-shan-zheng/400.css';
 import './style.css';
@@ -97,20 +97,18 @@ function coverPage(): HTMLElement {
   const savedGame = saved ? newGame(saved.input, saved.place, saved.reader, saved.picks) : null;
   const el = book.page(`
     <div class="binding" aria-hidden="true"><i style="top:12%"></i><i style="top:37%"></i><i style="top:63%"></i><i style="top:88%"></i></div>
-    <h1 class="label" tabindex="-1" data-focus>人生之书</h1>
+    <h1 class="label" tabindex="-1" data-focus>二十四时</h1>
     <div class="cover-mid">
       <span class="seal" aria-hidden="true">底层<br>代码</span>
       <p class="sub">把一生放进一天</p>
       <ul class="cover-gets">
-        <li>清晨 6 点出生，走到第二天破晓</li>
         <li>做 24 个选择，约 10 分钟</li>
         <li>得到一张属于你的人生签</li>
-        <li>和一份写给你的《人生说明书》</li>
       </ul>
       <button class="btn solid" type="button" id="open">翻开这本书</button>
       ${savedGame ? `<button class="btn light" type="button" id="resume">${savedGame.choices.length >= TOTAL_CHOICES ? '翻到书末，看看上次的一生' : `接着读 · 第 ${savedGame.choices.length + 1} 小时`}</button>` : ''}
-      <button class="link-btn" type="button" id="see-sample">先看看《人生说明书》长什么样</button>
-      <button class="link-btn" type="button" id="see-sources">这本书的来历：设定、排盘与方法</button>
+      <button class="btn light" type="button" id="see-sample">先看看《人生说明书》</button>
+      <button class="link-btn small" type="button" id="see-sources">这本书的来历</button>
       <p class="hint">免费玩 · 不用注册 · 戴上耳机更好</p>
     </div>`);
   el.classList.add('cover');
@@ -734,7 +732,7 @@ function renderAppendix(g: Game) {
       <div class="chips">${r.traits.map(t => `<span class="chip on">${esc(t.pole)}</span>`).join('')}</div>
       ${axesHtml(r)}
       <p class="lot-now">${esc(who)}今年 ${age} 岁，正翻到这本书的 <b>${clockLabel(nowBeat.hour)}</b>。</p>
-      <p class="lot-foot">人生之书 · 生于${esc(g.ctx.home)} · 由${esc(g.ctx.carer)}带大 · 改写了 ${r.rewriteCount} 行底层代码</p>
+      <p class="lot-foot">二十四时 · 生于${esc(g.ctx.home)} · 由${esc(g.ctx.carer)}带大 · 改写了 ${r.rewriteCount} 行底层代码</p>
     </article>
     <button class="btn" type="button" id="btn-share">生成这张签的图片，发给朋友</button>
 

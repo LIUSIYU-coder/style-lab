@@ -15,5 +15,5 @@ if (process.env.ADMIN_TOKEN && !adminToken) console.warn('ADMIN_TOKEN 太短(至
 const app = createApp({ store, distDir: join(root, 'dist'), trustProxy: process.env.TRUST_PROXY === 'first' ? 'first' : process.env.TRUST_PROXY === '1', adminToken, site: process.env.SITE });
 
 app.listen(port, host, () => {
-  console.log(`人生底层代码 已启动:http://${host}:${port}`);
+  console.log(`二十四时 已启动:http://${host}:${port}`);
 });

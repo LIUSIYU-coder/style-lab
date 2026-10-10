@@ -1,4 +1,4 @@
-/* 人生之书。布局:夜色书桌上摊着一本线装书,手机竖屏单页阅读,从书脊处翻页。
+/* 二十四时。布局:夜色书桌上摊着一本线装书,手机竖屏单页阅读,从书脊处翻页。
    书末附录是一叠可以往下翻的宣纸卡片。刻意只做这一种主题:深色书桌 + 宣纸书页。 */
 :root {
   --desk: #18202a;
@@ -691,3 +691,10 @@ select:disabled, input:disabled { opacity: 0.5; }
 .cover.has-art .label { background: rgb(242 236 221 / 0.94); }
 .source p { font-size: 0.9375rem; line-height: 1.85; text-indent: 0; }
 .row .link-btn.dark { padding-inline: 0; margin-right: 0.8rem; }
+
+/* ---------- 封面:主副标题与按钮层次 ---------- */
+.cover-mid .sub { font-family: var(--f-brush); font-size: 1.75rem; letter-spacing: 0.22em; color: #f3ead6; text-indent: 0.22em; text-shadow: 0 2px 12px rgb(0 0 0 / 0.55); }
+.cover-gets li { font-size: 0.9375rem; }
+.cover-gets li:nth-child(2) { color: #f1c9a8; }
+.cover-mid .btn { min-width: 12rem; }
+.link-btn.small { min-height: 2.2rem; font-size: 0.75rem; color: #aebcc0; }

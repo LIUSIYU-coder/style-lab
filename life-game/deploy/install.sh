@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 一键部署 / 更新「人生底层代码」到一台 Ubuntu 或 Debian 服务器。
+# 一键部署 / 更新「二十四时」到一台 Ubuntu 或 Debian 服务器。
 # 用法(在 life-game 目录里运行):sudo bash deploy/install.sh 你的域名
 # 会做这些事:安装 Node.js 22 和 Caddy → 把代码复制到 /opt/life-code → 构建网页
 #            → 注册 systemd 服务 → 让 Caddy 自动申请 HTTPS 证书并转发到服务。
@@ -66,7 +66,7 @@ ADMIN_TOKEN="$(cat "$APP/data/admin-token")"
 echo "==> 5/6 注册服务"
 cat > /etc/systemd/system/life-code.service <<UNIT
 [Unit]
-Description=人生底层代码
+Description=二十四时
 After=network.target
 
 [Service]

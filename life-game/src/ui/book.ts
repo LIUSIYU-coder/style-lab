@@ -35,7 +35,7 @@ export class Book {
     const el = document.createElement('section');
     el.className = 'page';
     el.innerHTML = `
-      ${opts.head !== undefined ? `<header class="page-head"><span>人生之书</span><span>${esc(opts.head)}</span></header>` : ''}
+      ${opts.head !== undefined ? `<header class="page-head"><span>二十四时</span><span>${esc(opts.head)}</span></header>` : ''}
       <div class="page-body ${opts.cls ?? ''}">${inner}</div>
       ${opts.folio ? `<footer class="page-foot">· ${cnNum(opts.folio)} ·</footer>` : ''}`;
     return el;

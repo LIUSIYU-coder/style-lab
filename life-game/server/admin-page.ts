@@ -1,7 +1,7 @@
 // 管理页:用手机就能生成兑换码、查询、重置设备、作废、看统计。需要 ADMIN_TOKEN。
 export const ADMIN_PAGE = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex"><title>人生之书 · 管理</title>
+<meta name="robots" content="noindex"><title>二十四时 · 管理</title>
 <style>
 :root{--bg:#18202a;--paper:#f2ecdd;--ink:#25211c;--soft:#6d6457;--red:#b33f2e;--line:#d8cdb5;color-scheme:dark}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 "PingFang SC",system-ui,sans-serif}
@@ -18,7 +18,7 @@ button.ghost{background:transparent;color:var(--red)}
 .out{font-size:.9rem;white-space:pre-wrap;color:var(--ink)}
 .err{color:var(--red)}
 </style></head><body><main>
-<h1>人生之书 · 管理</h1>
+<h1>二十四时 · 管理</h1>
 <section><h2>管理密码</h2><label for="token">Render 里 ADMIN_TOKEN 的值。每次打开这个页面都要重新输入，页面不会记住它。</label><input id="token" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" name="lc-admin-token-field"><div class="row"><label style="display:flex;gap:8px;align-items:center;flex:none"><input type="checkbox" id="show" style="width:auto"> 显示密码</label><span class="out" id="tlen" style="flex:1"></span><button class="ghost" id="clr" type="button" style="flex:none">清空</button></div></section>
 <section><h2>生成兑换码</h2>
 <div class="row"><div><label for="count">数量</label><input id="count" type="number" min="1" max="500" value="20"></div><div><label for="batch">批次名</label><input id="batch" value=""></div></div>
